@@ -1,7 +1,7 @@
 # Recolecta los datos de VIGÍA y publica la página en GitHub Pages, sin que nadie tenga que subir nada.
 # Cada hora: emergencias del INDECI, METAR, imagen térmica, IMERG y GDACS.
 # Los avisos y quebradas del SENAMHI y el ENFEN no responden fuera del Perú: los baja la PC del usuario
-# (subir-peru.bat, cada hora) y los sube a la rama datos-peru; aquí se leen de esa rama.
+# (subir-peru.bat, a los :05 de cada hora) y los sube a la rama datos-peru; la corrida de los :17 los lee de ahí.
 # Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
 name: Recolectar y publicar VIGÍA
@@ -17,7 +17,7 @@ on:
         required: false
         default: ""
   push:
-    branches: [main, datos-peru]
+    branches: [main]
 
 permissions:
   contents: read
