@@ -56,6 +56,9 @@ jobs:
           restore-keys: datos-
 
       - name: Recolectar
+        env:
+          VIGIA_ESPERA: "45"
+          PYTHONUNBUFFERED: "1"
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "Cambio en el código: se publica con los datos que ya hay"

@@ -12,6 +12,7 @@ import gzip
 import html
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -76,6 +77,10 @@ ENFEN_RESUMEN = {
 }
 
 
+# segundos de espera por descarga; en GitHub Actions se baja (VIGIA_ESPERA) para que una fuente lenta no frene a las demás
+ESPERA = float(os.environ.get("VIGIA_ESPERA", "120"))
+
+
 def bajar(url, texto=False, intentos=2, binario=False, rango=None):
     ultimo = None
     for _ in range(intentos):
@@ -84,7 +89,7 @@ def bajar(url, texto=False, intentos=2, binario=False, rango=None):
             if rango:
                 cab["Range"] = f"bytes={rango[0]}-{rango[1]}"
             req = urllib.request.Request(url, headers=cab)
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=ESPERA) as r:
                 crudo = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     crudo = gzip.decompress(crudo)
@@ -1111,13 +1116,14 @@ def main():
                 datos["estado"][clave] = viejo.get("estado", {}).get(clave)
                 _CACHE[clave] = viejo[clave]
             continue
+        t0 = time.time()
         try:
             datos[clave] = fn()
             datos["estado"][clave] = datos["generado"]
             n = len(datos[clave]) if isinstance(datos[clave], list) else "ok"
-            print(f"  {clave:10s} {n}")
+            print(f"  {clave:10s} {n} ({time.time() - t0:.0f} s)", flush=True)
         except Exception as e:  # noqa: BLE001
-            print(f"  {clave:10s} FALLÓ: {e}")
+            print(f"  {clave:10s} FALLÓ en {time.time() - t0:.0f} s: {e}", flush=True)
             if clave in viejo:  # se conserva el dato anterior y su fecha
                 datos[clave] = viejo[clave]
                 datos["estado"][clave] = viejo.get("estado", {}).get(clave)
