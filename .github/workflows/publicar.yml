@@ -1,0 +1,99 @@
+# Recolecta los datos de VIGÍA y publica la página en GitHub Pages, sin que nadie tenga que subir nada.
+# Cada hora: avisos y quebradas del SENAMHI, emergencias del INDECI, ENFEN, METAR, imagen térmica, IMERG y GDACS.
+# Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
+# También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
+name: Recolectar y publicar VIGÍA
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+    - cron: "41 5,11,17,23 * * *"
+  workflow_dispatch:
+    inputs:
+      fuentes:
+        description: "Fuentes separadas por espacios (vacío = todas). Ej.: avisos emergencias"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  recolectar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar librerías del recolector
+        run: pip install eccodes numpy pypdf
+
+      # los datos de la corrida anterior: así una corrida parcial conserva las demás fuentes
+      - name: Recuperar datos de la corrida anterior
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            datos/instantanea.js
+            datos/rios.js
+            datos/salidas.json
+            datos/indeci_cache.json
+            datos/historias.json
+            datos/lluvia-*.png
+            datos/termica.jpg
+          key: datos-${{ github.run_id }}
+          restore-keys: datos-
+
+      - name: Recolectar
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "Cambio en el código: se publica con los datos que ya hay"
+          elif [ "${{ github.event.schedule }}" = "17 * * * *" ]; then
+            python -X utf8 recolectar.py avisos quebradas emergencias enfen aerodromos termica imerg mundo || echo "El recolector terminó con errores; se publica lo que se pudo"
+          else
+            python -X utf8 recolectar.py ${{ github.event.inputs.fuentes }} || echo "El recolector terminó con errores; se publica lo que se pudo"
+          fi
+
+      - name: Guardar datos para la próxima corrida
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            datos/instantanea.js
+            datos/rios.js
+            datos/salidas.json
+            datos/indeci_cache.json
+            datos/historias.json
+            datos/lluvia-*.png
+            datos/termica.jpg
+          key: datos-${{ github.run_id }}
+
+      - name: Armar la página
+        env:
+          VIGIA_SITIO: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: python construir.py --paquete
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: publicar
+
+  publicar:
+    needs: recolectar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v5

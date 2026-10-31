@@ -1,0 +1,8 @@
+# se arman con construir.py
+index.html
+publicar/
+vigia-web.zip
+# imagen Sentinel-2 de la zona: solo la usa la versión de Claude y pesa 2 MB
+datos/zona-s2.jpg
+__pycache__/
+*.pyc
