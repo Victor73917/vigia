@@ -61,6 +61,24 @@ VIGÍA no emite alertas. Las oficiales en el Perú son del ENFEN, el SENAMHI, el
 - **Dentro de Claude**: en el enlace del artefacto. Usa la instantánea de datos guardada en `datos/` y trae el Analista.
 - **En tu computadora**: doble clic en **`Abrir VIGIA.bat`**. Abre un pequeño servidor local y la misma versión en vivo que la web. Necesita internet.
 
+## Publicación automática en GitHub (reemplaza a Netlify)
+
+El flujo `.github/workflows/publicar.yml` hace solo lo que antes había que hacer a mano:
+
+- **Cada hora** renueva los avisos y quebradas del SENAMHI, las emergencias del INDECI, el ENFEN, los METAR, la imagen térmica, IMERG y GDACS.
+- **Cada 6 horas** renueva todas las fuentes.
+- En cada corrida arma la página y la publica en GitHub Pages, en `https://USUARIO.github.io/vigia`. No cuesta créditos.
+- Cada cambio de código que se sube a `main` también se publica.
+- Desde la pestaña *Actions* del repositorio se puede correr a mano («Run workflow») y elegir las fuentes.
+
+Si el recolector avisa que el ENFEN publicó un comunicado nuevo, hay que actualizar a mano `ENFEN_RESUMEN` en `recolectar.py` y subir el cambio.
+
+Puesta en marcha (una sola vez):
+
+1. Crear el repositorio público `vigia` en GitHub, vacío.
+2. Desde esta carpeta, subir el código: `git remote add origin https://github.com/USUARIO/vigia.git` y luego `git push -u origin main`. Git abre el navegador para iniciar sesión.
+3. En el repositorio, ir a *Settings → Pages → Build and deployment* y elegir **GitHub Actions**.
+
 ## Publicar una versión nueva en la web
 
 1. Doble clic en `Actualizar datos.bat` para refrescar la instantánea.
