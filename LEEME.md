@@ -67,9 +67,18 @@ El flujo `.github/workflows/publicar.yml` hace solo lo que antes había que hace
 
 - **Cada hora** renueva los avisos y quebradas del SENAMHI, las emergencias del INDECI, el ENFEN, los METAR, la imagen térmica, IMERG y GDACS.
 - **Cada 6 horas** renueva todas las fuentes.
-- En cada corrida arma la página y la publica en GitHub Pages, en `https://USUARIO.github.io/vigia`. No cuesta créditos.
+- En cada corrida arma la página y la publica en GitHub Pages, en <https://victor73917.github.io/vigia>. No cuesta créditos.
 - Cada cambio de código que se sube a `main` también se publica.
 - Desde la pestaña *Actions* del repositorio se puede correr a mano («Run workflow») y elegir las fuentes.
+
+**Fuentes que solo responden desde el Perú.** Los avisos y quebradas del SENAMHI y el ENFEN no contestan a los servidores de GitHub. Los baja esta PC:
+
+- La tarea programada de Windows «VIGIA datos Peru» corre `subir-peru.bat` a los :05 de cada hora.
+- Ese archivo los sube a la rama `datos-peru`, que siempre tiene un solo commit.
+- La corrida de GitHub de los :17 los toma de ahí.
+- El registro queda en `datos/peru.log`.
+- Si la PC está apagada, esos datos se quedan con su última fecha, y la página la muestra.
+- Para quitar la tarea: `schtasks /Delete /TN "VIGIA datos Peru" /F`.
 
 Si el recolector avisa que el ENFEN publicó un comunicado nuevo, hay que actualizar a mano `ENFEN_RESUMEN` en `recolectar.py` y subir el cambio.
 
