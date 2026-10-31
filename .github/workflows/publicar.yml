@@ -1,5 +1,7 @@
 # Recolecta los datos de VIGÍA y publica la página en GitHub Pages, sin que nadie tenga que subir nada.
-# Cada hora: avisos y quebradas del SENAMHI, emergencias del INDECI, ENFEN, METAR, imagen térmica, IMERG y GDACS.
+# Cada hora: emergencias del INDECI, METAR, imagen térmica, IMERG y GDACS.
+# Los avisos y quebradas del SENAMHI y el ENFEN no responden fuera del Perú: los baja la PC del usuario
+# (subir-peru.bat, cada hora) y los sube a la rama datos-peru; aquí se leen de esa rama.
 # Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
 name: Recolectar y publicar VIGÍA
@@ -15,7 +17,7 @@ on:
         required: false
         default: ""
   push:
-    branches: [main]
+    branches: [main, datos-peru]
 
 permissions:
   contents: read
@@ -32,6 +34,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main
 
       - uses: actions/setup-python@v7
         with:
@@ -55,15 +59,21 @@ jobs:
           key: datos-${{ github.run_id }}
           restore-keys: datos-
 
+      - name: Traer los datos que sube la PC desde el Perú
+        run: |
+          git fetch --depth=1 origin datos-peru && git show FETCH_HEAD:peru.json > datos/peru.json || echo "Todavía no hay datos de la PC"
+
       - name: Recolectar
         env:
           VIGIA_ESPERA: "45"
+          VIGIA_SALTAR: "avisos quebradas enfen"
           PYTHONUNBUFFERED: "1"
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "Cambio en el código: se publica con los datos que ya hay"
+            echo "Cambio en el código o datos nuevos de la PC: se publica sin bajar fuentes"
+            python -X utf8 recolectar.py nada
           elif [ "${{ github.event.schedule }}" = "17 * * * *" ]; then
-            python -X utf8 recolectar.py avisos quebradas emergencias enfen aerodromos termica imerg mundo || echo "El recolector terminó con errores; se publica lo que se pudo"
+            python -X utf8 recolectar.py emergencias aerodromos termica imerg mundo || echo "El recolector terminó con errores; se publica lo que se pudo"
           else
             python -X utf8 recolectar.py ${{ github.event.inputs.fuentes }} || echo "El recolector terminó con errores; se publica lo que se pudo"
           fi

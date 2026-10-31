@@ -1088,10 +1088,37 @@ def fronteras():
     return lineas
 
 
+# Fuentes que solo responden desde el Perú: las baja la PC del usuario (--peru) y las sube a la rama datos-peru;
+# GitHub Actions las lee de ahí (datos/peru.json) y no intenta bajarlas (VIGIA_SALTAR).
+FUENTES_PERU = ("avisos", "quebradas", "enfen")
+PERU_JSON = DATOS / "peru.json"
+
+
+def fusionar_peru(viejo):
+    """Usa los datos de datos/peru.json cuando son más nuevos que los de la instantánea anterior."""
+    if not PERU_JSON.exists():
+        return
+    try:
+        peru = json.loads(PERU_JSON.read_text(encoding="utf-8"))
+    except ValueError:
+        return
+    viejo.setdefault("estado", {})
+    for clave, v in peru.get("fuentes", {}).items():
+        if v.get("estado") and v["estado"] > (viejo["estado"].get(clave) or ""):
+            viejo[clave] = v["datos"]
+            viejo["estado"][clave] = v["estado"]
+            print(f"  {clave:10s} desde la PC ({v['estado']})", flush=True)
+
+
 def main():
-    """Sin argumentos baja todas las fuentes; con nombres (p. ej. «cuencas emergencias») solo esas y conserva el resto."""
+    """Sin argumentos baja todas las fuentes; con nombres (p. ej. «cuencas emergencias») solo esas y conserva el resto.
+    Con --peru además escribe datos/peru.json con las fuentes que solo responden desde el Perú."""
     DATOS.mkdir(exist_ok=True)
-    solo = set(sys.argv[1:])
+    args = sys.argv[1:]
+    modo_peru = "--peru" in args
+    solo = {a for a in args if not a.startswith("--")} - set(os.environ.get("VIGIA_SALTAR", "").split())
+    if args and not solo:
+        solo = {"ninguna"}  # todo lo pedido se salta: solo se fusiona lo que llegó de la PC
     fuentes = {
         "oni": oni, "nino": nino_semanal,
         "clima": clima_lugares, "enfen": enfen_ultimo,
@@ -1109,7 +1136,16 @@ def main():
             viejo = json.loads(previo.read_text(encoding="utf-8").split("=", 1)[1].rstrip().rstrip(";"))
         except (ValueError, IndexError):
             viejo = {}
+    if not modo_peru:
+        fusionar_peru(viejo)
+    saltar = set(os.environ.get("VIGIA_SALTAR", "").split())
     for clave, fn in fuentes.items():
+        if not solo and clave in saltar:  # corrida completa en GitHub: estas fuentes llegan desde la PC
+            if clave in viejo:
+                datos[clave] = viejo[clave]
+                datos["estado"][clave] = viejo.get("estado", {}).get(clave)
+                _CACHE[clave] = viejo[clave]
+            continue
         if solo and clave not in solo:
             if clave in viejo:
                 datos[clave] = viejo[clave]
@@ -1135,6 +1171,10 @@ def main():
             print(f"  AVISO: ENFEN publicó el comunicado {ult}; actualiza ENFEN_RESUMEN.")
     js = "window.VIGIA_INSTANTANEA = " + json.dumps(datos, ensure_ascii=False, separators=(",", ":")) + ";\n"
     previo.write_text(js, encoding="utf-8")
+    if modo_peru:
+        fuentes_ok = {k: {"datos": datos[k], "estado": datos["estado"].get(k)} for k in FUENTES_PERU if k in datos and datos["estado"].get(k)}
+        PERU_JSON.write_text(json.dumps({"generado": datos["generado"], "fuentes": fuentes_ok}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"  peru.json  {', '.join(fuentes_ok)}", flush=True)
     try:  # los ríos van en un archivo aparte: son muchos puntos y cambian poco
         if solo and "cuencas" not in solo:
             print("  rios       sin cambios (se conservan los de la corrida anterior)")

@@ -6,3 +6,6 @@ vigia-web.zip
 datos/zona-s2.jpg
 __pycache__/
 *.pyc
+
+datos/peru.json
+datos/peru.log
