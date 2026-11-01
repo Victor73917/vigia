@@ -61,11 +61,18 @@ jobs:
             datos/salidas.json
             datos/indeci_cache.json
             datos/historias.json
-            datos/unidades.json
             datos/lluvia-*.png
             datos/termica.jpg
           key: datos-${{ github.run_id }}
           restore-keys: datos-
+
+      # caché aparte: sumar un archivo a la de arriba cambia su versión y la corrida no encontraría los datos anteriores
+      - name: Recuperar las cuencas de todo el Perú
+        uses: actions/cache/restore@v6
+        with:
+          path: datos/unidades.json
+          key: unidades-${{ github.run_id }}
+          restore-keys: unidades-
 
       - name: Traer los datos que sube la PC desde el Perú
         run: |
@@ -97,10 +104,16 @@ jobs:
             datos/salidas.json
             datos/indeci_cache.json
             datos/historias.json
-            datos/unidades.json
             datos/lluvia-*.png
             datos/termica.jpg
           key: datos-${{ github.run_id }}
+
+      - name: Guardar las cuencas de todo el Perú
+        if: always() && hashFiles('datos/unidades.json') != ''
+        uses: actions/cache/save@v6
+        with:
+          path: datos/unidades.json
+          key: unidades-${{ github.run_id }}
 
       - name: Armar la página
         env:
