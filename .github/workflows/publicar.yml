@@ -49,7 +49,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar librerías del recolector
-        run: pip install eccodes numpy pypdf
+        run: pip install eccodes numpy pillow pypdf
 
       # los datos de la corrida anterior: así una corrida parcial conserva las demás fuentes
       - name: Recuperar datos de la corrida anterior
