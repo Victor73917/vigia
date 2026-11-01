@@ -471,6 +471,16 @@ button.aero:hover{border-color:var(--filo-2)}
 .btn-tema{flex:none;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--filo-2);background:var(--vidrio);border-radius:50%;color:var(--tinta-2);padding:0}
 .btn-tema svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .btn-tema:hover,.modo-trabajo:hover{border-color:var(--sodio)}
+.tabla-comparar th,.tabla-comparar td{vertical-align:top;min-width:120px}
+.tabla-comparar thead th{position:relative;padding-right:24px}
+.tabla-comparar th[scope="row"]{min-width:110px;font-weight:600;font-size:12.5px;color:var(--tinta-2)}
+.tabla-comparar small{display:block;color:var(--tinta-3);font-size:11px;margin-top:2px;font-weight:400}
+.tabla-comparar .quitar{position:absolute;right:2px;top:4px;border:0;background:transparent;color:var(--tinta-3);font-size:16px;line-height:1;padding:2px 4px}
+.opciones-comparar{display:flex;flex-direction:column;gap:6px}
+.opciones-comparar:empty{display:none}
+.opciones-comparar button{text-align:left;background:var(--noche);border:1px solid var(--filo-2);border-radius:10px;padding:7px 11px;color:var(--tinta)}
+.opciones-comparar button:hover{border-color:var(--sodio)}
+.opciones-comparar small{display:block;color:var(--tinta-3);font-size:11.5px}
 .nota-modo{border-left:3px solid var(--sodio);padding:6px 10px;background:var(--sodio-tenue);border-radius:0 8px 8px 0;font-size:12.5px;color:var(--tinta-2)}
 /* asesor */
 .btn-asesor{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:calc(26px + var(--franja));z-index:7;border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:9px 14px;font-size:13px;color:var(--tinta);display:flex;gap:7px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
@@ -746,6 +756,7 @@ button.aero:hover{border-color:var(--filo-2)}
       <button role="tab" id="t-lluvia" aria-controls="p-lluvia" aria-selected="false" data-vista="lluvia">Lluvia</button>
       <button role="tab" id="t-nino" aria-controls="p-nino" aria-selected="false" data-vista="nino">El Niño</button>
       <button role="tab" id="t-lugar" aria-controls="p-lugar" aria-selected="false" data-vista="lugar">Lugar</button>
+      <button role="tab" id="t-comparar" aria-controls="p-comparar" aria-selected="false" data-vista="comparar">Comparar</button>
       <button role="tab" id="t-analista" aria-controls="p-analista" aria-selected="false" data-vista="analista">Analista</button>
     </div>
     <div class="cuerpo" id="cuerpo">
@@ -758,6 +769,8 @@ button.aero:hover{border-color:var(--filo-2)}
         <p class="nota filtro-nac" id="filtroNac" hidden></p>
         <h3>Departamentos</h3>
         <div class="envoltura-tabla" id="tablaNac"></div>
+        <h3>Distritos que mirar primero · todo el Perú</h3>
+        <div class="envoltura-tabla" id="prioNac"></div>
         <p class="nota" id="notaNac"></p>
         <div><h2>Prioridad de atención · zona norte</h2><p class="meta" id="metaOps"></p></div>
         <div class="fila-chips" id="depsOps" role="group" aria-label="Departamento"></div>
@@ -791,6 +804,9 @@ button.aero:hover{border-color:var(--filo-2)}
         <div><h2>Ríos y cuencas</h2><p class="meta" id="metaRios"></p></div>
         <div class="envoltura-tabla" id="tablaCuencas"></div>
         <div class="vista" id="fichaCuenca"></div>
+        <div><h3 id="tituloRiosPe">Todo el Perú · un punto de control por cuenca</h3><p class="meta" id="metaRiosPe"></p></div>
+        <div class="envoltura-tabla" id="riosPe"></div>
+        <p class="nota" id="notaRiosPe"></p>
         <h3 id="tituloRiosEc">Ecuador · ríos de la costa</h3>
         <div class="envoltura-tabla" id="riosEc"></div>
         <p class="nota" id="notaRios"></p>
@@ -842,6 +858,12 @@ button.aero:hover{border-color:var(--filo-2)}
         <div class="vista" id="lugarCuerpo"></div>
       </section>
 
+      <section class="vista" id="p-comparar" role="tabpanel" aria-labelledby="t-comparar" hidden>
+        <div><h2>Comparar lugares</h2><p class="meta">Hasta 4 distritos, provincias o departamentos · mismas fuentes que la situación nacional</p></div>
+        <form class="buscador" id="formComparar" autocomplete="off"><input id="txtComparar" aria-label="Distrito, provincia o departamento para comparar" placeholder="Agregar: «Huancayo», «Loreto», «Paucarpata»…"><button class="btn" type="submit">Buscar</button></form>
+        <div id="opcionesComparar" class="opciones-comparar"></div>
+        <div id="cuerpoComparar"></div>
+      </section>
       <section class="vista" id="p-analista" role="tabpanel" aria-labelledby="t-analista" hidden>
         <div><h2>Analista</h2><p class="meta">Claude lee los datos de esta página y responde</p></div>
         <div id="analistaCuerpo"></div>
@@ -912,9 +934,10 @@ const DATA = {
   zona: S.zona || null, aerodromos: S.aerodromos || [], termica: S.termica || null,
   emergencias: S.emergencias?.emergencias || [], cuencas: S.cuencas?.cuencas || [], imagenZona: S.imagen_zona || null,
   mm: S.multimodelo || null, riosEc: S.rios_ec || [], ens: S.ensamble || null, mundo: S.mundo || [], oceano: S.oceano || null,
+  riosPe: S.rios_pe?.rios || [], riosPeMeta: S.rios_pe || null,
 };
 const FRESCO = {};
-for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano']) FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
+for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano', 'rios_pe']) FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
 
 const WMO = { 0: 'Despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Niebla', 48: 'Niebla con escarcha', 51: 'Llovizna débil', 53: 'Llovizna', 55: 'Llovizna intensa', 56: 'Llovizna helada', 57: 'Llovizna helada intensa', 61: 'Lluvia débil', 63: 'Lluvia moderada', 65: 'Lluvia fuerte', 66: 'Lluvia helada', 67: 'Lluvia helada fuerte', 71: 'Nieve débil', 73: 'Nieve', 75: 'Nieve fuerte', 77: 'Granizo fino', 80: 'Chubascos débiles', 81: 'Chubascos', 82: 'Chubascos fuertes', 85: 'Chubascos de nieve', 86: 'Chubascos de nieve fuertes', 95: 'Tormenta eléctrica', 96: 'Tormenta con granizo', 99: 'Tormenta con granizo fuerte' };
 // Ríos con caudales sobre lo normal según el Comunicado Oficial ENFEN 19-2026
@@ -1067,7 +1090,7 @@ $('#gestor').addEventListener('input', e => {
 $('#gestor').addEventListener('click', e => { const b = e.target.closest('[data-base]'); if (b) { G?.base(b.dataset.base); pintarGestor(); } });
 
 /* ---------------- pestañas y hoja inferior ---------------- */
-const VISTAS = ['ops', 'emergencias', 'rios', 'lluvia', 'nino', 'lugar', 'analista'];
+const VISTAS = ['ops', 'emergencias', 'rios', 'lluvia', 'nino', 'lugar', 'comparar', 'analista'];
 // en escritorio, «Lugar» no es una pestaña: es el panel derecho, que se abre al elegir un lugar
 const lugarVisible = () => esMovil() ? UI.vista === 'lugar' : !$('#contexto').hidden;
 function bordesPaneles() {
@@ -1110,6 +1133,7 @@ function abrirVista(v, { desplegar = true } = {}) {
   $('#cuerpo').scrollTop = 0;
   if (desplegar && esMovil() && $('#panel').dataset.estado === 'asomo') fijarHoja('media');
   if (v === 'ops') pintarOps();
+  if (v === 'comparar') pintarComparar();
   if (v === 'emergencias') pintarEmergencias();
   if (v === 'rios') pintarRios();
   if (v === 'lugar' && UI.lugar) pintarLugar();
@@ -1740,19 +1764,39 @@ function resumenNacional(dia) {
     const dep = ds[0]?.id.slice(0, 2) || TERR.departamentos.find(t => normq(t[1]) === normq(e.dep))?.[0];
     if (dep) emergDep.set(dep, [...(emergDep.get(dep) || []), e]);
   }
+  // ríos con crecida de 2 años o más en 7 días: el distrito donde está su punto de control (norte y resto del país)
+  for (const c of [...DATA.cuencas.filter(c => c.salida), ...DATA.riosPe]) {
+    const e = estadoCuenca(c); if (!e || (e.nivel ?? 0) < 2) continue;
+    const t = distritoPeruEn(c.salida[0], c.salida[1]), d = t && dist.get(t[0]);
+    if (d && (!d.rio || e.nivel > d.rio.nivel)) d.rio = { c, nivel: e.nivel, e };
+  }
+  for (const d of dist.values()) d.prio = prioridadNac(d, dia);
   const deps = TERR.departamentos.map(([id, n]) => {
     const ds = [...dist.values()].filter(d => d.id.startsWith(id)), em = emergDep.get(id) || [];
     return { id, n, total: ds.length, aviso: Math.max(0, ...ds.map(d => d.aviso)), conAviso: ds.filter(d => d.aviso >= 2).length,
-      porNivel: [4, 3, 2].map(k => ds.filter(d => d.aviso === k).length), quebrada: ds.filter(d => d.quebrada >= 2).length, emerg: em.length, victimas: em.filter(graveEmerg).length };
+      porNivel: [4, 3, 2].map(k => ds.filter(d => d.aviso === k).length), quebrada: ds.filter(d => d.quebrada >= 2).length, emerg: em.length, victimas: em.filter(graveEmerg).length,
+      altas: ds.filter(d => d.prio.nivel === 3).length };
   });
   const r = { dia, datos: DATA, dist, deps, sinUbicar, numerosAviso: [...new Set(zonas.map(z => z.numero))] };
   CACHE_NAC.set(dia, r);
   return r;
 }
+// Prioridad de atención con lo que existe para todo el país: aviso de lluvia o de quebradas del SENAMHI ese día
+// (amarillo 1, naranja 2, rojo 3), emergencia del COEN-INDECI en 30 días (2, y 1 más si menciona víctimas) y río con
+// crecida pronosticada cuyo punto de control está en el distrito (1, o 2 si es de 5 años o más). Sin población expuesta:
+// ese dato solo existe para el norte.
+function prioridadNac(d, dia) {
+  let p = 0; const motivos = [], nv = Math.max(d.aviso, d.quebrada);
+  if (nv >= 2) { p += nv - 1; motivos.push(`${d.aviso >= d.quebrada ? 'Aviso de lluvia' : 'Activación de quebradas'} nivel ${NIVEL_AVISO[nv].n} (SENAMHI)`); }
+  if (d.emerg.length) { p += 2; motivos.push(`${d.emerg.length} emergencia${d.emerg.length > 1 ? 's' : ''} en 30 días (COEN-INDECI)`); if (d.emerg.some(graveEmerg)) { p += 1; motivos.push('el reporte menciona víctimas'); } }
+  if (d.rio) { p += d.rio.nivel >= 3 ? 2 : 1; motivos.push(`río ${d.rio.c.n}: ${NC(d.rio.nivel).n} pronosticada (GloFAS)`); }
+  return { p, nivel: p >= 4 ? 3 : p >= 2 ? 2 : p >= 1 ? 1 : 0, motivos };
+}
 const FILTROS_NAC = {
   avisos: { n: 'distritos con aviso de lluvia del SENAMHI', nivel: d => d.aviso, color: n => COL[NIVEL_AVISO[n].c] },
   quebradas: { n: 'distritos con posible activación de quebradas', nivel: d => d.quebrada, color: n => COL[NIVEL_AVISO[n].c] },
   emergencias: { n: 'distritos con emergencias reportadas por el COEN-INDECI (30 días)', nivel: d => d.emerg.length ? (d.emerg.some(graveEmerg) ? 4 : 3) : 0, color: n => COL[n >= 4 ? 'rojo' : 'naranja'] },
+  prioridad: { n: 'distritos con prioridad de atención media o alta (criterio nacional de VIGÍA)', nivel: d => d.prio.nivel >= 2 ? d.prio.nivel + 1 : 0, color: n => COL[n >= 4 ? 'rojo' : n === 3 ? 'naranja' : 'amarillo'] },
 };
 // «hace 3 h» con aviso si la fuente no se actualiza desde hace más de un día
 function fuenteHtml(nombre, k) {
@@ -1776,7 +1820,8 @@ function pintarNacional({ encuadrar = false } = {}) {
   const porNivel = [4, 3, 2].map(k => dsAviso.filter(d => d.aviso === k).length);
   const qv = vigQuebradaEnDia(dia), dsQueb = [...R.dist.values()].filter(d => d.quebrada >= 2), q = DATA.quebradas;
   const em = DATA.emergencias, depsEm = R.deps.filter(d => d.emerg), vict = em.filter(graveEmerg).length;
-  const crecidas = DATA.cuencas.filter(c => (estadoCuenca(c)?.nivel || 0) >= 2).length;
+  const rios = [...DATA.cuencas, ...DATA.riosPe].filter(c => c.historia?.mediana_max_anual), crecidas = rios.filter(c => (estadoCuenca(c)?.nivel || 0) >= 2).length;
+  const dsPrio = [0, 0, 0, 0]; for (const d of R.dist.values()) dsPrio[d.prio.nivel]++;
   const tarjeta = (k, titulo_, valor, detalle, fuente) => `<button class="kpi" type="button" data-filtro="${k}" aria-pressed="${UI.nac.filtro === k}"><small>${titulo_}</small><b>${valor}</b><span>${detalle}</span>${fuente}</button>`;
   $('#kpisNac').innerHTML =
     tarjeta('avisos', 'Departamentos con aviso de lluvia', num(depsAviso.length),
@@ -1787,7 +1832,8 @@ function pintarNacional({ encuadrar = false } = {}) {
       fuenteHtml('SENAMHI', 'quebradas')) +
     tarjeta('emergencias', 'Emergencias reportadas · 30 días', num(em.length),
       `en ${depsEm.length} departamentos${vict ? ` · <strong style="color:var(--rojo)">${vict} mencionan víctimas</strong>` : ''}`, fuenteHtml('COEN-INDECI', 'emergencias')) +
-    `<button class="kpi" type="button" data-ir="rios"><small>Ríos con crecida pronosticada</small><b>${num(crecidas)}</b><span>de ${DATA.cuencas.length} ríos de la costa norte. El resto del país aún no tiene esta vigilancia</span>${fuenteHtml('GloFAS', 'cuencas')}</button>` +
+    tarjeta('prioridad', 'Distritos con prioridad alta · criterio nacional', num(dsPrio[3]), `${num(dsPrio[2])} con prioridad media · aviso, quebradas, emergencias y ríos`, '<span class="fuente">Cruce de VIGÍA, no oficial</span>') +
+    `<button class="kpi" type="button" data-ir="rios"><small>Ríos con crecida pronosticada</small><b>${num(crecidas)}</b><span>de ${rios.length} ríos con umbral de crecida${DATA.riosPeMeta ? ` · ${DATA.riosPe.length} de ${DATA.riosPeMeta.unidades + DATA.cuencas.filter(c => c.salida).length} cuencas con punto de control` : ' de la costa norte. El resto del país aún no tiene esta vigilancia'}</span>${fuenteHtml('GloFAS', 'cuencas')}</button>` +
     `<div class="kpi no-disp"><small>Reportes ciudadanos · misiones · recursos</small><b>No disponible</b><span>Requiere el servidor seguro del centro de comando (fase 6). No se muestran cifras simuladas</span></div>`;
   const ord = UI.nac.orden, val = {
     aviso: d => d.aviso * 1e6 + d.conAviso * 1e3 + d.emerg, conAviso: d => d.conAviso, quebrada: d => d.quebrada, emerg: d => d.emerg * 10 + d.victimas, n: d => -d.n.charCodeAt(0),
@@ -1796,7 +1842,12 @@ function pintarNacional({ encuadrar = false } = {}) {
   const th = (k, t, cls = '') => `<th class="${cls}"${ord === k ? ' aria-sort="descending"' : ''}><button type="button" data-orden="${k}">${t}</button></th>`;
   $('#tablaNac').innerHTML = `<table class="tabla tabla-nac"><thead><tr>${th('n', 'Departamento')}${th('aviso', 'Aviso SENAMHI')}${th('conAviso', 'Distritos con aviso', 'num')}${th('quebrada', 'Quebradas', 'num')}${th('emerg', 'Emergencias', 'num')}</tr></thead><tbody>${filas.map(d => `
     <tr class="clic" data-dep-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${num(d.total)} distritos</small></td><td>${chipNivel(d.aviso)}</td><td class="num">${d.conAviso ? num(d.conAviso) : '–'}</td><td class="num">${qv ? (d.quebrada ? num(d.quebrada) : '–') : '<span title="sin aviso de quebradas vigente">·</span>'}</td><td class="num">${d.emerg ? num(d.emerg) + (d.victimas ? ` <span class="victima">${d.victimas} víct.</span>` : '') : '–'}</td></tr>`).join('')}</tbody></table>`;
-  $('#notaNac').innerHTML = `Cruce de VIGÍA, no oficial, entre los límites del INEI y los avisos oficiales: un distrito cuenta como «con aviso» si su centro cae dentro de la zona del aviso de lluvia del SENAMHI para ese día; las quebradas se asignan por nombre de distrito y las emergencias por su UBIGEO. «Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. Toca una tarjeta para ver esos distritos en el mapa y un departamento para ir a él.`;
+  const primeros = [...R.dist.values()].filter(d => d.prio.nivel >= 2).sort((a, b) => b.prio.p - a.prio.p || Math.max(b.aviso, b.quebrada) - Math.max(a.aviso, a.quebrada) || b.emerg.length - a.emerg.length || a.n.localeCompare(b.n));
+  $('#prioNac').innerHTML = primeros.length ? `<table class="tabla"><thead><tr><th>Distrito</th><th>Prioridad</th><th>Motivos</th></tr></thead><tbody>${primeros.slice(0, UI.nac.todos ? 400 : 15).map(d => `
+    <tr class="clic" data-dist-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${esc(titulo(d.prov || ''))} · ${esc(titulo(d.dep || ''))}</small></td><td>${chipPrio(d.prio.nivel)}</td><td><small style="color:var(--tinta-2)">${esc(d.prio.motivos.join(' · '))}</small></td></tr>`).join('')}</tbody></table>
+    ${primeros.length > 15 ? `<button class="btn" type="button" data-todos-nac style="margin-top:8px">${UI.nac.todos ? 'Ver solo los 15 primeros' : `Ver los ${num(primeros.length)} distritos`}</button>` : ''}`
+    : '<p class="vacio">Ningún distrito suma prioridad media o alta ese día con los datos disponibles. Eso no quiere decir que no haya riesgo.</p>';
+  $('#notaNac').innerHTML = `<strong>Prioridad · criterio nacional</strong> (de VIGÍA, no oficial): suma aviso de lluvia o de quebradas del SENAMHI ese día (amarillo 1, naranja 2, rojo 3), emergencia del COEN-INDECI en 30 días (2, y 1 más si menciona víctimas) y río con crecida pronosticada por GloFAS cuyo punto de control cae en el distrito (1, o 2 si es de 5 años o más). Alta: 4 o más · media: 2 o 3. No incluye población expuesta, que solo existe para el norte: por eso un distrito del norte puede tener otra prioridad en la sección de abajo. Cruce de VIGÍA, no oficial, entre los límites del INEI y los avisos oficiales: un distrito cuenta como «con aviso» si su centro cae dentro de la zona del aviso de lluvia del SENAMHI para ese día; las quebradas se asignan por nombre de distrito y las emergencias por su UBIGEO. «Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. Toca una tarjeta para ver esos distritos en el mapa y un departamento para ir a él.`;
   pintarFiltroNacional(encuadrar);
 }
 
@@ -1852,6 +1903,8 @@ document.getElementById('p-ops').addEventListener('click', e => {
   const fl = t.closest('[data-filtro]'); if (fl) { UI.nac.filtro = UI.nac.filtro === fl.dataset.filtro ? null : fl.dataset.filtro; return pintarNacional({ encuadrar: true }); }
   if (t.closest('[data-quitar-filtro]')) { UI.nac.filtro = null; return pintarNacional(); }
   const or = t.closest('[data-orden]'); if (or) { UI.nac.orden = or.dataset.orden; return pintarNacional(); }
+  if (t.closest('[data-todos-nac]')) { UI.nac.todos = !UI.nac.todos; return pintarNacional(); }
+  const dd = t.closest('[data-dist-nac]'); if (dd) { const en = indiceConsulta().find(x => x.tipo === 'distrito' && x.obj.id === dd.dataset.distNac && TERRITORIO[x.tipo] && x.obj.poligonos); if (en) { $('#txtConsulta').value = titulo(en.obj.n); consultar(en.obj.n, en); } return; }
   const dn = t.closest('[data-dep-nac]'); if (dn) { const en = indiceConsulta().find(x => x.tipo === 'departamento' && x.obj.id === dn.dataset.depNac); if (en) { $('#txtConsulta').value = titulo(en.obj.n); consultar(en.obj.n, en); } return; }
   const dia = t.closest('[data-dia]'); if (dia) return elegirDiaOps(dia.dataset.dia);
   const mp = t.closest('[data-mapa]'); if (mp) { UI.ops.mapa = mp.dataset.mapa; UI.capas.distritos = true; pintarCapas(); G?.capas(); G?.distritos(); pintarOps(); return; }
@@ -2106,6 +2159,7 @@ function grafCaudal(c, sim) {
   });
 }
 function pintarRios() {
+  pintarRiosPe();
   const cs = DATA.cuencas;
   $('#metaRios').textContent = `${cs.length} cuencas · caudal GloFAS ${FRESCO.cuencas.modo === 'vivo' ? 'en vivo, ' : ''}${haceCuanto(FRESCO.cuencas.t)}`;
   if (!cs.length) { $('#tablaCuencas').innerHTML = '<p class="vacio">Faltan las cuencas en esta actualización: ejecuta «Actualizar datos».</p>'; $('#fichaCuenca').innerHTML = ''; return; }
@@ -2253,12 +2307,104 @@ async function abrirReciente(r) {
 function cerrarRecientes(foco) { $('#recientes').hidden = true; $('#btnRecientes').setAttribute('aria-expanded', 'false'); if (foco) $('#btnRecientes').focus(); }
 function verTerritorio(o, tipo) {
   const nombres = { distrito: `Distrito · ${titulo(o.prov || '')}, ${titulo(o.dep || '')}`, provincia: `Provincia · ${titulo(o.dep || '')}`, departamento: 'Departamento' };
-  UI.lugar = { n: titulo(o.n), lat: o.lat, lng: o.lng, pais: 'PE', ref: null, meta: `${nombres[tipo]} · UBIGEO ${o.id}`,
-    nota: 'Fuera de la zona norte: aquí VIGÍA no calcula prioridad ni exposición. Se muestran el pronóstico en vivo y los avisos del SENAMHI que cubren el punto.' };
+  UI.lugar = { n: titulo(o.n), lat: o.lat, lng: o.lng, pais: 'PE', ref: null, meta: `${nombres[tipo]} · UBIGEO ${o.id}`, ubigeo: o.id, tipo,
+    nota: 'Fuera de la zona norte VIGÍA no tiene la población expuesta: la prioridad usa el criterio nacional (avisos, emergencias y ríos). Se muestran además el pronóstico en vivo y los avisos del SENAMHI que cubren el punto.' };
   G?.marcarDistrito({ poligonos: o.poligonos }); G?.marcarLugar(null);
   abrirVista('lugar'); G?.encuadrar(o.caja); fijarUrl(o.id); pintarLugar();
   recordar({ tipo, obj: o });
 }
+/* ---------------- comparar localidades ---------------- */
+// Hasta cuatro distritos, provincias o departamentos lado a lado, con las mismas fuentes del tablero nacional; la lista
+// queda en el navegador de quien la arma.
+const MAX_COMPARAR = 4;
+let COMPARAR = (() => { try { return JSON.parse(localStorage.getItem('vigia-comparar') || '[]'); } catch { return []; } })();
+const guardarComparar = () => { try { localStorage.setItem('vigia-comparar', JSON.stringify(COMPARAR)); } catch { /* sin almacenamiento */ } };
+function claveLugar(L) {
+  if (L?.distrito) return { id: L.distrito.id, tipo: 'distrito', n: titulo(L.distrito.n), lat: L.distrito.lat, lng: L.distrito.lng };
+  if (L?.ubigeo) return { id: L.ubigeo, tipo: L.tipo, n: L.n, lat: L.lat, lng: L.lng };
+  return null;
+}
+function botonComparar(L) {
+  const k = claveLugar(L); if (!k) return '';
+  const ya = COMPARAR.some(x => x.id === k.id), lleno = COMPARAR.length >= MAX_COMPARAR;
+  return `<div class="acciones" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-comparar-agregar="${esc(JSON.stringify(k))}"${ya || lleno ? ' disabled' : ''}>${ya ? 'Ya está en la comparación' : lleno ? 'La comparación ya tiene 4 lugares' : '＋ Comparar con otros lugares'}</button>${COMPARAR.length ? `<button class="btn" type="button" data-ver-comparar>Ver la comparación (${COMPARAR.length})</button>` : ''}</div>`;
+}
+function bloquePrioNac(id) {
+  const R = resumenNacional(UI.ops.dia || diasOps()[0]), d = R?.dist.get(id);
+  if (!d) return '';
+  const pr = d.prio;
+  return `<h3>Prioridad de atención · criterio nacional · ${nombreDia(R.dia).toLowerCase()}</h3><div class="kpis"><div class="kpi nivel" style="--c:var(--${NIVEL_PRIO[pr.nivel]?.c || 'tinta-3'})"><small>Prioridad</small><b>${pr.nivel ? NIVEL_PRIO[pr.nivel].n : 'baja'}</b><span>${esc(pr.motivos.join(' · ') || 'Sin aviso, emergencia ni crecida con los datos disponibles. No quiere decir que no haya riesgo')}</span></div></div>`;
+}
+const LLUVIA_CMP = new Map(); // UBIGEO → [[fecha, mm]…] de ECMWF vía Open-Meteo, en el centro del lugar
+async function lluviaComparar(xs) {
+  const faltan = xs.filter(x => x.tipo !== 'departamento' && !LLUVIA_CMP.has(x.id) && x.lat != null);
+  if (!faltan.length) return false;
+  try {
+    const d = await traer(`https://api.open-meteo.com/v1/forecast?latitude=${faltan.map(x => x.lat).join(',')}&longitude=${faltan.map(x => x.lng).join(',')}&daily=precipitation_sum&models=ecmwf_ifs&timezone=America/Lima&forecast_days=4`);
+    (Array.isArray(d) ? d : [d]).forEach((r, i) => LLUVIA_CMP.set(faltan[i].id, r.daily.time.map((t, j) => [t, r.daily.precipitation_sum[j]])));
+    return true;
+  } catch { for (const x of faltan) LLUVIA_CMP.set(x.id, null); return true; }
+}
+function datosComparar(x, R) {
+  const ds = [...R.dist.values()].filter(d => x.tipo === 'distrito' ? d.id === x.id : d.id.startsWith(x.id));
+  const em = [...new Set(ds.flatMap(d => d.emerg))];
+  const rios = [...DATA.cuencas.filter(c => c.salida), ...DATA.riosPe].map(c => ({ c, t: distritoPeruEn(c.salida[0], c.salida[1]) })).filter(r => r.t && (x.tipo === 'distrito' ? r.t[0] === x.id : r.t[0].startsWith(x.id)));
+  let cercano = null;
+  if (!rios.length && x.tipo === 'distrito') for (const c of [...DATA.cuencas.filter(c => c.salida), ...DATA.riosPe]) { const km = distKm(x.lat, x.lng, c.salida[0], c.salida[1]); if (km <= 40 && (!cercano || km < cercano.km)) cercano = { c, km }; }
+  return { ds, em, rios: rios.map(r => r.c), cercano };
+}
+function pintarComparar() {
+  const el = $('#cuerpoComparar');
+  if (!TERR) { el.innerHTML = '<p class="vacio">Cargando el índice territorial del INEI…</p>'; cargarTerritorio().then(() => UI.vista === 'comparar' && pintarComparar()); return; }
+  if (!COMPARAR.length) { el.innerHTML = '<p class="vacio">Todavía no hay lugares. Busca un distrito, una provincia o un departamento aquí arriba, o abre uno en el mapa y toca «Comparar con otros lugares».</p>'; return; }
+  const dias = diasOps(), Rs = dias.map(f => resumenNacional(f)), R0 = Rs[0];
+  const xs = COMPARAR.map(x => ({ x, v: datosComparar(x, R0) }));
+  const celdaAviso = (x, R) => { const ds = [...R.dist.values()].filter(d => x.tipo === 'distrito' ? d.id === x.id : d.id.startsWith(x.id)), n = Math.max(0, ...ds.map(d => d.aviso)), con = ds.filter(d => d.aviso >= 2).length; return `${chipNivel(n)}${x.tipo !== 'distrito' && con ? `<small>${con} de ${ds.length} distritos</small>` : ''}`; };
+  const fila = (t, f, fuente = '') => `<tr><th scope="row">${t}${fuente ? `<small>${fuente}</small>` : ''}</th>${xs.map(f).join('')}</tr>`;
+  const lluvia = ({ x }) => {
+    if (x.tipo === 'departamento') return '<td><small>No aplica: un solo punto no representa todo el departamento</small></td>';
+    const ll = LLUVIA_CMP.get(x.id);
+    if (x.lat == null) return '<td><small>Sin coordenadas del lugar</small></td>';
+    if (ll === undefined) return '<td><small>consultando…</small></td>';
+    if (!ll) return '<td><small>Sin datos: no respondió Open-Meteo</small></td>';
+    const s = ll.slice(0, 3).reduce((a, r) => a + (r[1] || 0), 0), mx = ll.slice(0, 3).reduce((a, r) => (r[1] || 0) > (a[1] || 0) ? r : a, ll[0]);
+    return `<td class="num">${num(s, 1)} mm<small>máx. ${num(mx[1] || 0, 1)} mm el ${fechaCorta(mx[0])}</small></td>`;
+  };
+  el.innerHTML = `<div class="envoltura-tabla"><table class="tabla tabla-comparar"><thead><tr><th></th>${xs.map(({ x }) => `<th><b>${esc(x.n)}</b><small>${x.tipo} · ${x.id}</small><button type="button" class="quitar" data-comparar-quitar="${x.id}" aria-label="Quitar ${esc(x.n)} de la comparación">×</button></th>`).join('')}</tr></thead><tbody>
+    ${dias.map((f, i) => fila(`Aviso de lluvia · ${nombreDia(f).toLowerCase()}`, ({ x }) => `<td>${celdaAviso(x, Rs[i])}</td>`, i === 0 ? 'SENAMHI' : '')).join('')}
+    ${fila('Quebradas · hoy', ({ v }) => { const n = Math.max(0, ...v.ds.map(d => d.quebrada)); return `<td>${vigQuebradaEnDia(dias[0]) ? chipNivel(n) : '<small>sin aviso vigente</small>'}</td>`; }, 'SENAMHI')}
+    ${fila('Emergencias · 30 días', ({ v }) => `<td class="num">${v.em.length ? num(v.em.length) : '–'}${v.em.some(graveEmerg) ? `<small style="color:var(--rojo)">${v.em.filter(graveEmerg).length} mencionan víctimas</small>` : ''}</td>`, 'COEN-INDECI')}
+    ${fila('Prioridad · criterio nacional', ({ x, v }) => { if (x.tipo === 'distrito') { const p = v.ds[0]?.prio; return `<td>${p ? chipPrio(p.nivel) : '–'}${p?.motivos.length ? `<small>${esc(p.motivos.join(' · '))}</small>` : ''}</td>`; } const a = v.ds.filter(d => d.prio.nivel === 3).length, m = v.ds.filter(d => d.prio.nivel === 2).length; return `<td class="num">${a} alta · ${m} media<small>de ${v.ds.length} distritos</small></td>`; }, 'VIGÍA, no oficial')}
+    ${fila('Ríos con punto de control', ({ v }) => v.rios.length ? `<td>${v.rios.slice(0, 3).map(c => { const e = estadoCuenca(c); return `<div>${esc(c.n)} ${DATA.riosPe.includes(c) ? chipRioPe(c, e) : chipCaudal(e?.nivel)}</div>`; }).join('')}${v.rios.length > 3 ? `<small>y ${v.rios.length - 3} más</small>` : ''}</td>` : v.cercano ? `<td>${esc(v.cercano.c.n)} ${DATA.riosPe.includes(v.cercano.c) ? chipRioPe(v.cercano.c, estadoCuenca(v.cercano.c)) : chipCaudal(estadoCuenca(v.cercano.c)?.nivel)}<small>a ${num(v.cercano.km)} km</small></td>` : '<td><small>Sin datos suficientes: ningún punto de control cerca</small></td>', 'GloFAS')}
+    ${fila('Lluvia pronosticada · 3 días', lluvia, 'ECMWF vía Open-Meteo, en el centro')}
+  </tbody></table></div>
+  <p class="nota">«Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. En provincias y departamentos se muestra el nivel más alto entre sus distritos.</p>`;
+  lluviaComparar(COMPARAR).then(cambio => { if (cambio && UI.vista === 'comparar') pintarComparar(); });
+}
+function agregarComparar(k) {
+  if (!k || COMPARAR.some(x => x.id === k.id) || COMPARAR.length >= MAX_COMPARAR) return;
+  COMPARAR.push(k); guardarComparar();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-comparar-agregar]');
+  if (a) { agregarComparar(JSON.parse(a.dataset.compararAgregar)); pintarLugar(); return; }
+  if (e.target.closest('[data-ver-comparar]')) return abrirVista('comparar');
+  const q = e.target.closest('[data-comparar-quitar]');
+  if (q) { COMPARAR = COMPARAR.filter(x => x.id !== q.dataset.compararQuitar); guardarComparar(); pintarComparar(); return; }
+  const o = e.target.closest('[data-comparar-opcion]');
+  if (o) {
+    const en = indiceConsulta()[+o.dataset.compararOpcion], t = [...TERR.departamentos, ...TERR.provincias, ...TERR.distritos].find(r => r[0] === en.obj.id);
+    agregarComparar({ id: en.obj.id, tipo: en.tipo, n: titulo(en.obj.n), lat: en.obj.lat ?? t?.[3][1], lng: en.obj.lng ?? t?.[3][0] }); $('#opcionesComparar').innerHTML = ''; $('#txtComparar').value = ''; pintarComparar(); }
+});
+$('#formComparar').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = normq($('#txtComparar').value); if (!q) return;
+  if (!TERR) await cargarTerritorio();
+  const I = indiceConsulta(), ops = I.map((en, i) => ({ en, i })).filter(({ en }) => TERRITORIO[en.tipo] && en.obj.id && en.clave === q).slice(0, 8);
+  $('#opcionesComparar').innerHTML = ops.length ? ops.map(({ en, i }) => `<button type="button" data-comparar-opcion="${i}">${esc(titulo(en.obj.n))}<small>${en.tipo}${en.obj.prov ? ' · ' + esc(titulo(en.obj.prov)) : ''}${en.obj.dep && en.tipo !== 'departamento' ? ' · ' + esc(titulo(en.obj.dep)) : ''}</small></button>`).join('')
+    : '<p class="vacio">No hay un distrito, provincia o departamento con ese nombre. Revisa cómo lo escribe el INEI.</p>';
+});
+
 function verCentroPoblado(o) {
   const d = ZD().find(x => x.id === o.id);
   UI.lugar = { n: titulo(o.n), lat: o.lat, lng: o.lng, pais: 'PE', ref: null, meta: `Centro poblado · ${titulo(o.dist)}, ${titulo(o.prov)}, ${titulo(o.dep)} (INEI)` };
@@ -2697,6 +2843,8 @@ async function pintarLugar() {
   const html = `
     <div><h2>${esc(L.n)}</h2><p class="meta">${D ? `Distrito · ${esc(titulo(D.prov))}, ${esc(titulo(D.dep))} · UBIGEO ${D.id} · ` : L.meta ? esc(L.meta) + ' · ' : ''}${coord(L.lat, L.lng)} · ${hora(ahora, tz)} hora local${tz === 'UTC' ? ' (UTC)' : ''} · ${deNoche ? 'de noche' : 'de día'}</p></div>
     ${L.nota ? `<p class="nota">${esc(L.nota)}</p>` : ''}
+    ${botonComparar(L)}
+    ${!D && L.tipo === 'distrito' ? bloquePrioNac(L.ubigeo) : ''}
     <h3>Próximos 5 días · amenaza e incertidumbre</h3>
     <div id="cincoDias"><p class="vacio">Consultando 7 modelos meteorológicos…</p></div>
     ${D ? bloqueDistrito(D).split('<h3>Exposición')[0] : ''}
@@ -2901,6 +3049,11 @@ function calcularAlertas() {
     const det = [t && txtRio(t), t?.nivel >= 2 && NC(t.nivel).n, txtProb(probCrecida(c)), ll >= 20 && `${num(ll)} mm de lluvia en la cuenca en 48 h`].filter(Boolean).join(' · ');
     L.push({ k: 'c' + c.codigo, n, titulo: `Río ${c.n}`, det, ir: () => verCuenca(c) });
   }
+  // en el resto del país solo avisa la crecida de 2 años o más: subir sin llegar es normal en la temporada de lluvias
+  for (const c of DATA.riosPe) {
+    const t = tendenciaRio(c);
+    if (t?.n >= 2) L.push({ k: 'pe' + c.codigo, n: 2, titulo: `Río ${c.n}${depDeRio(c) ? ' · ' + depDeRio(c) : ''}`, det: `${txtRio(t)} · ${NC(t.nivel).n} (GloFAS)`, ir: () => verRioEc({ pe: c }) });
+  }
   for (const r of DATA.riosEc) {
     r.t = tendenciaRio(r); r.nivel = nivelCuenca(r);
     if (r.nivel) L.push({ k: 'ec' + r.n, n: r.nivel, titulo: `Río ${r.n} · Ecuador`, det: [r.t && txtRio(r.t), txtProb(probCrecida(r))].filter(Boolean).join(' · '), ir: () => verRioEc(r) });
@@ -2928,6 +3081,7 @@ function aplicarAlertasGlobo(fecha = null) {
   G.alertasRios(new Map(DATA.cuencas.map((c, i) => [i, nivelCuenca(c, fecha)])));
   // estaciones de río a la salida de cada cuenca (como los puntos de Google Flood Hub), coloreadas por su estado
   G.riosEc([...DATA.cuencas.filter(c => c.salida && c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), cuenca: c })),
+    ...DATA.riosPe.filter(c => c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), pe: c })),
     ...DATA.riosEc.map(r => ({ ...r, nivel: fecha ? tendenciaRio(r, fecha)?.n || 0 : r.nivel }))].filter(r => r.nivel >= 1));
 }
 function pintarAlertas() {
@@ -2972,7 +3126,40 @@ $('#alertas').addEventListener('click', e => {
   ALERTAS[+b.dataset.alerta]?.ir();
 });
 // ríos de Ecuador
+/* ---------------- ríos de todo el Perú ---------------- */
+// Un punto de control de GloFAS por cuenca de la ANA fuera del norte (recolectar.py, rios_peru): la celda del río que da
+// nombre a la cuenca con más caudal, cerca de su salida. Los umbrales salen de la serie del propio río desde 2005; mientras
+// no esté, el río figura «umbral en cálculo» y no se pinta como tranquilo.
+function distritoPeruEn(lat, lng) {
+  if (!TERR) return null;
+  for (const t of TERR.distritos) { t._caja ??= cajaPoligonos(t[4]); if (enCaja(lng, lat, t._caja) && t[4].some(p => dentroPoligono(lng, lat, p))) return t; }
+  return null;
+}
+const depDeRio = c => c._dep !== undefined ? c._dep : TERR ? (c._dep = (t => t ? titulo(TERR.departamentos.find(d => d[0] === t[0].slice(0, 2))?.[1] || '') : '')(distritoPeruEn(c.salida[0], c.salida[1]))) : '';
+const chipRioPe = (c, e) => !c.historia ? '<span class="nivel-chip sin" title="Falta la serie histórica del río para saber qué caudal es una crecida">umbral en cálculo</span>' : chipCaudal(e?.nivel);
+function pintarRiosPe() {
+  const m = DATA.riosPeMeta, cs = DATA.riosPe;
+  if (!m || !cs.length) {
+    $('#metaRiosPe').textContent = ''; $('#notaRiosPe').textContent = '';
+    $('#riosPe').innerHTML = '<p class="vacio">Sin datos suficientes: esta actualización todavía no trae los ríos del resto del país.</p>'; return;
+  }
+  const conH = cs.filter(c => c.historia).length;
+  $('#metaRiosPe').textContent = `${cs.length} de ${m.unidades} cuencas con punto de control · ${conH} con umbrales de crecida · GloFAS ${haceCuanto(FRESCO.rios_pe.t)}`;
+  const xs = cs.map(c => ({ c, e: estadoCuenca(c) })).sort((a, b) => (b.e?.nivel ?? -1) - (a.e?.nivel ?? -1) || (b.e?.ratio || 0) - (a.e?.ratio || 0) || a.c.n.localeCompare(b.c.n));
+  $('#riosPe').innerHTML = `<table class="tabla"><thead><tr><th>Río</th><th class="num">Hoy</th><th class="num">Pico 7 días</th><th>Estado</th></tr></thead><tbody>${xs.map(({ c, e }) => `
+    <tr class="clic" data-rio-pe="${cs.indexOf(c)}"><td><b>${esc(c.n)}</b><small>${c.tipo === 'intercuenca' ? 'tramo' : 'cuenca'} · ${esc(c.vertiente)}${depDeRio(c) ? ' · ' + esc(depDeRio(c)) : ''}</small></td><td class="num">${e ? num(e.hoy) : '–'}</td><td class="num">${e ? `${num(e.pico)}<small>${fechaCorta(e.picoFecha)}</small>` : '–'}</td><td>${chipRioPe(c, e)}</td></tr>`).join('')}</tbody></table>`;
+  $('#notaRiosPe').innerHTML = `Caudal en m³/s de GloFAS v4 en el río que da nombre a cada cuenca de la ANA, cerca de su salida. <strong>Cobertura:</strong> ${cs.length} de ${m.unidades} cuencas e intercuencas fuera del norte${m.por_buscar ? `; en ${m.por_buscar} todavía se busca el punto de control` : ''}. Las demás no tienen un río con nombre en la red del IGN o GloFAS no les da caudal: para ellas VIGÍA no tiene datos suficientes. Los umbrales de crecida salen de la serie de GloFAS desde 2005 y se van completando de a pocos por el límite de consultas de Open-Meteo. GloFAS sobreestima los ríos áridos de la costa sur: compara cada río con su propia historia, no entre ríos.`;
+}
+function verRioPe(c) {
+  if (!c) return;
+  const e = estadoCuenca(c), T = periodos(c.historia);
+  G?.irA(c.salida[0], c.salida[1], 120);
+  avisoToast(`<b>Río ${esc(c.n)}</b>${depDeRio(c) ? ` · ${esc(depDeRio(c))}` : ''}<br><small>${e ? `Hoy ${num(e.hoy)} m³/s · pico de ${num(e.pico)} m³/s el ${fechaCorta(e.picoFecha)}` : 'Sin pronóstico de caudal'} · ${T ? `${NC(e?.nivel).n} · crecida de 2 años: ${num(T.q2)} m³/s, de 5 años: ${num(T.q5)} m³/s (GloFAS desde 2005)` : 'umbral de crecida en cálculo'}</small>`, 12000, 'info');
+}
+document.addEventListener('click', e => { const tr = e.target.closest('[data-rio-pe]'); if (tr) verRioPe(DATA.riosPe[+tr.dataset.rioPe]); });
+
 function htmlRioEc(r) {
+  if (r.pe) { const e = estadoCuenca(r.pe); return `<b>Río ${esc(r.n)}</b><small>${e ? `Hoy ${num(e.hoy)} m³/s · pico ${num(e.pico)} m³/s el ${fechaCorta(e.picoFecha)} · ${NC(e.nivel).n}` : 'sin dato'}${r.nivel ? ' · ' + NIVEL_ALERTA[r.nivel].n : ''} · GloFAS</small>`; }
   if (r.cuenca) { const e = estadoCuenca(r.cuenca), pr = probCrecida(r.cuenca); return `<b>Río ${esc(r.n)}</b><small>${e ? `Hoy ${num(e.hoy)} m³/s · pico ${num(e.pico)} m³/s el ${fechaCorta(e.picoFecha)} · ${NC(e.nivel).n}` : 'sin dato'}${pr ? ` · ${pr.p2} % de prob. de crecida de 2 años` : ''}${r.nivel ? ' · ' + NIVEL_ALERTA[r.nivel].n : ''}</small>`; }
   const t = r.t || tendenciaRio(r);
   return `<b>Río ${esc(r.n)} · Ecuador</b><small>Caudal GloFAS: ${t ? `${num(t.hoy)} m³/s hoy, ${num(t.q)} m³/s el ${fechaCorta(t.fecha)} (${signo(t.subida * 100, 0)} %)` : 'sin dato'}${r.nivel ? ' · ' + NIVEL_ALERTA[r.nivel].n : ''}</small>`;
@@ -2983,6 +3170,7 @@ function pintarRiosEc() {
 }
 function verRioEc(r) {
   if (r.cuenca) return verCuenca(r.cuenca);
+  if (r.pe) { abrirVista('rios'); return verRioPe(r.pe); }
   abrirVista('rios');
   G?.irA(r.salida[0], r.salida[1], 120);
   setTimeout(() => $('#tituloRiosEc')?.scrollIntoView({ behavior: reducido ? 'auto' : 'smooth', block: 'start' }), 80);
@@ -4559,13 +4747,14 @@ async function actualizarConjunto() {
 }
 async function actualizarCaudales() {
   // GloFAS vía Open-Meteo permite leerse desde el navegador: se renueva cada 3 horas en la versión web
-  const cs = [...DATA.cuencas.filter(c => c.salida), ...DATA.riosEc];
+  const cs = [...DATA.cuencas.filter(c => c.salida), ...DATA.riosEc], todos = [...cs, ...DATA.riosPe];
   if (!cs.length || (FRESCO.cuencas?.modo === 'vivo' && Date.now() - FRESCO.cuencas.t < 3 * 3600000)) return false;
   try {
     const k = ['river_discharge', 'river_discharge_median', 'river_discharge_p25', 'river_discharge_p75', 'river_discharge_max'];
-    const d = await traer(`https://flood-api.open-meteo.com/v1/flood?latitude=${cs.map(c => c.salida[0]).join(',')}&longitude=${cs.map(c => c.salida[1]).join(',')}&daily=${k.join(',')}&past_days=10&forecast_days=30`);
-    (Array.isArray(d) ? d : [d]).forEach((r, i) => { const x = r.daily; cs[i].caudal = x.time.map((t, j) => [t, ...k.map(n => x[n][j] == null ? null : Math.round(x[n][j] * 10) / 10)]); });
-    FRESCO.cuencas = { t: Date.now(), modo: 'vivo' }; if (DATA.riosEc.length) FRESCO.rios_ec = FRESCO.cuencas;
+    const d = await traer(`https://flood-api.open-meteo.com/v1/flood?latitude=${todos.map(c => c.salida[0]).join(',')}&longitude=${todos.map(c => c.salida[1]).join(',')}&daily=${k.join(',')}&past_days=10&forecast_days=30`);
+    (Array.isArray(d) ? d : [d]).forEach((r, i) => { const x = r.daily; todos[i].caudal = x.time.map((t, j) => [t, ...k.map(n => x[n][j] == null ? null : Math.round(x[n][j] * 10) / 10)]); });
+    FRESCO.cuencas = { t: Date.now(), modo: 'vivo' }; if (DATA.riosEc.length) FRESCO.rios_ec = FRESCO.cuencas; if (DATA.riosPe.length) FRESCO.rios_pe = FRESCO.cuencas;
+    CACHE_NAC.clear(); // la prioridad nacional usa el estado de los ríos
     try { // los 51 escenarios, para la probabilidad de crecida
       const en = await traer(`https://flood-api.open-meteo.com/v1/flood?latitude=${cs.map(c => c.salida[0]).join(',')}&longitude=${cs.map(c => c.salida[1]).join(',')}&daily=river_discharge&ensemble=true&forecast_days=10`);
       const arr = Array.isArray(en) ? en : [en], rios = {};

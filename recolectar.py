@@ -846,6 +846,165 @@ def ensamble_rios():
     return {"fechas": d[0]["daily"]["time"], "rios": por}
 
 
+# ---------- ríos del resto del Perú: un punto de control de GloFAS por cuenca ----------
+# Las cuencas y las intercuencas con nombre de la ANA (Marañón, Huallaga, Ucayali, Apurímac, Madre de Dios…); las del
+# norte ya las calcula cuencas_norte con su red de ríos. El límite de Open-Meteo no deja armar todo en una corrida:
+# cada corrida busca algunos puntos de control y algunas series históricas nuevas, y los guarda para las siguientes.
+RIOS_PE_SALIDAS = 12      # cuencas nuevas por corrida donde se busca el punto de control (60 consultas cada una)
+RIOS_PE_HISTORIAS = 4     # series nuevas desde 2005 por corrida (unas 550 consultas cada una)
+RIOS_PE_SEGUNDOS = 240    # tope de tiempo para la parte lenta (búsquedas e historias)
+
+
+def unidades_peru():
+    """Cuencas e intercuencas con nombre de todo el Perú, con su contorno simplificado. Cambian poco: se guardan
+    en datos/unidades.json y se vuelven a pedir cada 90 días."""
+    ruta = DATOS / "unidades.json"
+    if ruta.exists():
+        u = json.loads(ruta.read_text(encoding="utf-8"))
+        if (dt.date.today() - dt.date.fromisoformat(u["fecha"])).days < 90:
+            return u["unidades"]
+    capa = wfs_senamhi("g_carto_fundamento", "cuencas", "&propertyName=codigo,nombre,orden,nivel1,geom")
+    salida = []
+    for f in capa["features"]:
+        p, g = f["properties"], f.get("geometry")
+        n = (p.get("nombre") or "").strip()
+        if not g or p.get("orden") == 999 or n.startswith(("Lago", "Interna")) or re.fullmatch(r"Intercuenca \d+", n):
+            continue
+        polis = poligonos_simples(g, eps=0.003, area_min=0.0005)
+        km2 = round(sum(area_km2(poli[0]) for poli in polis)) if polis else 0
+        if not polis or (n.startswith("Intercuenca") and km2 < 500):  # tramos diminutos de un río grande: no lo representan
+            continue
+        salida.append({"codigo": p["codigo"], "n": n.replace("Cuenca ", "").replace("Intercuenca ", "").replace("Huallga", "Huallaga"),
+                       "tipo": "intercuenca" if n.startswith("Intercuenca") else "cuenca",
+                       "vertiente": {"1": "Pacífico", "0": "Titicaca"}.get(p.get("nivel1"), "Amazonas"),  # Pfafstetter: 1, 4 y 0
+                       "km2": km2, "poligonos": polis})
+    ruta.write_text(json.dumps({"fecha": dt.date.today().isoformat(), "unidades": salida}, ensure_ascii=False), encoding="utf-8")
+    return salida
+
+
+def nombres_cauce(n):
+    """Nombres de río que buscar en la red del IGN: «Alto Marañón I» → Marañón; «Quilca - Vitor - Chili» → los tres."""
+    n = re.sub(r"\b(Alto|Medio|Bajo|I{1,3}|IV|V)\b", " ", n.replace("De Las", "Las").replace("De la", "La"))
+    return [p.strip() for p in re.split(r"\s+-\s+|-", n) if len(p.strip()) >= 4]
+
+
+def dist_borde(x, y, polis):
+    m = 9.0
+    for p in polis:
+        for anillo in p:
+            for k in range(0, len(anillo) - 2, 2):
+                ax, ay, bx, by = anillo[k], anillo[k + 1], anillo[k + 2], anillo[k + 3]
+                dx, dy = bx - ax, by - ay
+                t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy or 1e-12)))
+                m = min(m, math.hypot(x - ax - t * dx, y - ay - t * dy))
+    return m
+
+
+def candidatos_cauce(u, n=60):
+    """Puntos del río que da nombre a la cuenca (red hídrica del IGN: líneas y, para los ríos anchos, sus márgenes),
+    dentro de ella y lo más lejos posible de su borde: así la celda de GloFAS con más caudal es la de ese río cerca
+    de su salida, y no la del río grande al que desemboca."""
+    dentro_ = []
+    for nombre in nombres_cauce(u["n"]):
+        comodin = re.sub(r"[aeiouáéíóúüñ]", "_", nombre.lower())  # el IGN y la ANA no siempre tildan igual
+        patron = re.compile(r"\b" + re.escape(sin_tildes(nombre).lower()) + r"\b")
+        for capa_ign in ("rios_linea_ign", "rios_area_ign"):
+            capa = wfs_cql("g_carto_fundamento", capa_ign, f"nombre ILIKE '%{comodin}%'", ["nombre", "geom"])
+            for f in capa["features"]:
+                g = f.get("geometry")
+                if not g or not patron.search(sin_tildes(f["properties"].get("nombre") or "").lower()):
+                    continue
+                if g["type"] in ("Polygon", "MultiPolygon"):
+                    lineas = [anillo for poli in (g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]) for anillo in poli]
+                else:
+                    lineas = g["coordinates"] if g["type"] == "MultiLineString" else [g["coordinates"]]
+                for linea in lineas:
+                    for x, y in rdp([(q[0], q[1]) for q in linea], 0.003):
+                        if any(dentro(x, y, p) for p in u["poligonos"]):
+                            dentro_.append((round(y, 3), round(x, 3), dist_borde(x, y, u["poligonos"])))
+    pts = []
+    for margen in (0.05, 0.03, 0.015, 0):  # el margen más amplio que deje al menos tres puntos
+        pts = sorted({(la, lo) for la, lo, d in dentro_ if d >= margen})
+        if len(pts) >= 3:
+            break
+    return pts[::max(1, len(pts) // n)][:n]
+
+
+def salida_por_cauce(codigo, candidatos, cache):
+    """Celda de GloFAS con más caudal medio en 14 días entre los candidatos. Las cuencas sin cauce con nombre o sin
+    caudal (endorreicas o fuera de la red de GloFAS) se anotan para no volver a buscarlas."""
+    if not candidatos:
+        cache[codigo] = "sin"
+        return None, 0
+    d = bajar(f"{FLOOD}?latitude={','.join(str(p[0]) for p in candidatos)}&longitude={','.join(str(p[1]) for p in candidatos)}"
+              "&daily=river_discharge&past_days=13&forecast_days=1")
+    d = d if isinstance(d, list) else [d]
+    mejor, media_mejor = None, 0
+    for (la, lo), x in zip(candidatos, d):
+        v = [q for q in x["daily"]["river_discharge"] if q is not None]
+        media = sum(v) / len(v) if v else 0
+        if media > media_mejor:
+            mejor, media_mejor = [la, lo], media
+    cache[codigo] = mejor if mejor and media_mejor >= 0.1 else "sin"  # casi sin caudal: fuera de la red de GloFAS
+    return (mejor if cache[codigo] != "sin" else None), media_mejor
+
+
+def rios_peru():
+    t0 = time.time()
+    unidades = unidades_peru()
+    norte = {c["codigo"] for c in (_CACHE.get("cuencas") or {}).get("cuencas", []) if c.get("salida")}
+    ruta_s = DATOS / "salidas.json"
+    salidas = json.loads(ruta_s.read_text(encoding="utf-8")) if ruta_s.exists() else {}
+    ruta_h = DATOS / "historias.json"
+    nuevas_s = nuevas_h = 0
+    rios = []
+    for u in unidades:
+        if u["codigo"] in norte:
+            continue
+        s = salidas.get(u["codigo"])
+        if s is None and nuevas_s < RIOS_PE_SALIDAS and time.time() - t0 < RIOS_PE_SEGUNDOS:
+            try:
+                s, media = salida_por_cauce(u["codigo"], candidatos_cauce(u), salidas)
+                nuevas_s += 1
+                print(f"    {u['n']}: punto de control {s} ({media:.1f} m³/s de media)", flush=True)
+                ruta_s.write_text(json.dumps(salidas), encoding="utf-8")
+            except Exception as e:  # noqa: BLE001
+                print(f"    {u['n']}: sin punto de control ({str(e)[:90]})", flush=True)
+                s = None
+        if not s or s == "sin":
+            continue
+        rio = {k: u[k] for k in ("codigo", "n", "tipo", "vertiente", "km2")}
+        rio["salida"] = s
+        cache_h = json.loads(ruta_h.read_text(encoding="utf-8")) if ruta_h.exists() else {}
+        if f"{s[0]},{s[1]}" in cache_h:
+            rio["historia"] = historia_caudal(*s, desde="2005-01-01")
+        elif nuevas_h < RIOS_PE_HISTORIAS and time.time() - t0 < RIOS_PE_SEGUNDOS:
+            try:
+                rio["historia"] = historia_caudal(*s, desde="2005-01-01")
+                nuevas_h += 1
+            except Exception as e:  # noqa: BLE001
+                print(f"    {u['n']}: sin historia ({str(e)[:90]})", flush=True)
+        rios.append(rio)
+    # pronóstico de todos los puntos en lotes: una consulta por cada 40 ríos
+    claves = ["river_discharge", "river_discharge_median", "river_discharge_p25", "river_discharge_p75", "river_discharge_max"]
+    for i in range(0, len(rios), 40):
+        lote = rios[i:i + 40]
+        try:
+            d = bajar(f"{FLOOD}?latitude={','.join(str(x['salida'][0]) for x in lote)}&longitude={','.join(str(x['salida'][1]) for x in lote)}"
+                      f"&daily={','.join(claves)}&past_days=10&forecast_days=30")
+            d = d if isinstance(d, list) else [d]
+            for x, r_ in zip(lote, d):
+                y = r_["daily"]
+                x["caudal"] = [[t] + [None if y[k][j] is None else round(y[k][j], 1) for k in claves] for j, t in enumerate(y["time"])]
+        except Exception as e:  # noqa: BLE001
+            print(f"    pronóstico de ríos {i}-{i + len(lote)}: {str(e)[:90]}", flush=True)
+    faltan_s = sum(1 for u in unidades if u["codigo"] not in norte and salidas.get(u["codigo"]) is None)
+    print(f"    {len(rios)} ríos con punto de control · {sum(1 for x in rios if x.get('historia'))} con historia · "
+          f"{faltan_s} cuencas por buscar", flush=True)
+    return {"rios": rios, "unidades": len([u for u in unidades if u["codigo"] not in norte]), "por_buscar": faltan_s,
+            "fuente": "ANA (unidades hidrográficas, GeoServer del SENAMHI) y GloFAS v4 de Copernicus vía Open-Meteo"}
+
+
 def mundo_gdacs():
     """Desastres activos en el mundo según GDACS (ONU y Comisión Europea): inundaciones, ciclones y sequías de nivel
     naranja o rojo de las últimas tres semanas."""
@@ -1139,6 +1298,7 @@ def main():
         "zona": zona_norte, "aerodromos": aerodromos, "termica": termica,
         "emergencias": emergencias_indeci, "cuencas": cuencas_norte, "imagen_zona": imagen_zona,
         "multimodelo": multimodelo, "rios_ec": rios_ecuador, "ensamble": ensamble_rios, "mundo": mundo_gdacs, "oceano": oceano,
+        "rios_pe": rios_peru,
     }
     datos = {"generado": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "estado": {}}
     previo = DATOS / "instantanea.js"

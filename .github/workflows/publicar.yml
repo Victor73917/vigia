@@ -61,6 +61,7 @@ jobs:
             datos/salidas.json
             datos/indeci_cache.json
             datos/historias.json
+            datos/unidades.json
             datos/lluvia-*.png
             datos/termica.jpg
           key: datos-${{ github.run_id }}
@@ -81,7 +82,7 @@ jobs:
             echo "Cambio en el código o datos nuevos de la PC: se publica sin bajar fuentes"
             python -X utf8 recolectar.py nada
           elif [ "${{ github.event.schedule }}" = "17 * * * *" ]; then
-            python -X utf8 recolectar.py emergencias aerodromos termica imerg mundo avisos quebradas enfen || echo "El recolector terminó con errores; se publica lo que se pudo"
+            python -X utf8 recolectar.py emergencias aerodromos termica imerg mundo avisos quebradas enfen rios_pe || echo "El recolector terminó con errores; se publica lo que se pudo"
           else
             python -X utf8 recolectar.py ${{ github.event.inputs.fuentes }} || echo "El recolector terminó con errores; se publica lo que se pudo"
           fi
@@ -96,6 +97,7 @@ jobs:
             datos/salidas.json
             datos/indeci_cache.json
             datos/historias.json
+            datos/unidades.json
             datos/lluvia-*.png
             datos/termica.jpg
           key: datos-${{ github.run_id }}

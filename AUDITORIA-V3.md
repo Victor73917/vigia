@@ -272,3 +272,36 @@ Navegador local, a 1366×800 y 375×812:
 - Con el panel derecho abierto, el buscador conserva 303 px.
 - En el celular la página no se desborda y la versión de dos semanas tiene 17 días.
 - Sin errores en la consola.
+
+## 11. Fase 4: cobertura nacional de ríos y prioridad, y comparar lugares (1 de noviembre de 2026)
+
+| Pieza | Qué hace | Fuente |
+|---|---|---|
+| Ríos de todo el Perú | Un punto de control de GloFAS por cada cuenca e intercuenca con nombre de la ANA fuera del norte (124 unidades) | ANA e IGN (GeoServer del SENAMHI), GloFAS v4 vía Open-Meteo |
+| Cómo se elige el punto | La celda con más caudal **sobre el río que da nombre a la cuenca** (red hídrica del IGN, líneas y márgenes de los ríos anchos), dentro de la cuenca y lejos de su borde | — |
+| Umbrales de crecida | De 2 y 5 años, con la serie de GloFAS desde 2005 de cada río. Hasta tenerla, el río dice «umbral en cálculo», no «bajo» | GloFAS |
+| Ritmo | Por el límite gratuito de Open-Meteo, cada corrida busca 12 puntos y arma 4 series nuevas, y las guarda para las siguientes. Corre cada hora | — |
+| Prioridad · criterio nacional | Suma aviso de lluvia o de quebradas (1 a 3), emergencia en 30 días (2, más 1 si menciona víctimas) y río con crecida cuyo punto de control cae en el distrito (1 o 2). Alta: 4 o más; media: 2 o 3. Incluye una tarjeta que filtra el mapa, la lista de distritos que mirar primero y el bloque en el panel de cada distrito | SENAMHI, COEN-INDECI, GloFAS |
+| Comparar lugares | Pestaña nueva para hasta 4 distritos, provincias o departamentos. Muestra para cada uno el aviso de 4 días, quebradas, emergencias, prioridad, ríos con punto de control y lluvia ECMWF a 3 días en el centro del lugar (salvo en departamentos). La lista se guarda en el navegador | Las mismas, y Open-Meteo |
+
+**Descartado:** primero probé a buscar el punto de control en el borde de la cuenca, y el método tomaba el río vecino:
+- El Tambopata y el Inambari tomaban el Madre de Dios.
+- El Ocoña quedaba con 2,7 m³/s, mientras que Pescadores–Caravelí se quedaba con el caudal que parece ser el del Ocoña.
+
+Por eso se cambió al método del río con nombre.
+
+**Revisión del método final con 70 cuencas:**
+- El Huallaga crece aguas abajo: 730, 1 304, 1 693, 2 126 y 2 290 m³/s.
+- Ocoña: 81 m³/s. Nanay: 611. Morona: 915.
+- Quedan sin punto, y figuran como «sin datos suficientes», las cuencas sin un río con nombre en la red del IGN o sin caudal en GloFAS. Ejemplos: Ushusuma, Lluta y Bocapán.
+
+**Limitaciones:**
+- GloFAS sobreestima los ríos áridos de la costa (Huarmey, Casma), así que cada río se compara solo con su propia historia.
+- El río suma prioridad solo al distrito donde cae su punto de control, no a todos los que atraviesa (eso solo existe en el norte).
+- La prioridad nacional no incluye población expuesta.
+
+**Pruebas locales** (con una muestra de 28 ríos):
+- 21 distritos con prioridad alta y 91 con prioridad media hoy.
+- Huarmaca (Piura) encabeza la lista: quebradas en rojo y 3 emergencias.
+- La comparación de la provincia de Huancayo, el departamento de Loreto y el distrito de Piura muestra datos coherentes.
+- En el celular, la tabla se desplaza dentro de su recuadro sin desbordar la página.
