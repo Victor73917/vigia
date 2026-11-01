@@ -4,6 +4,9 @@
 # (subir-peru.bat, a los :05 de cada hora) y los sube a la rama datos-peru; la corrida de los :17 los lee de ahí.
 # Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
+# Producción (/vigia/) se arma siempre desde main. La rama desarrollo se arma en /vigia/pruebas/, con los mismos datos
+# y una marca de «entorno de pruebas». En los cambios de código (push o a mano) corre la prueba automática de navegación
+# sobre el sitio de pruebas y, si falla, no se publica nada.
 name: Recolectar y publicar VIGÍA
 
 on:
@@ -17,7 +20,7 @@ on:
         required: false
         default: ""
   push:
-    branches: [main]
+    branches: [main, desarrollo]
 
 permissions:
   contents: read
@@ -96,6 +99,32 @@ jobs:
         env:
           VIGIA_SITIO: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: python construir.py --paquete
+
+      - name: Armar el sitio de pruebas (rama desarrollo)
+        env:
+          VIGIA_SITIO: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pruebas
+          VIGIA_PRUEBAS: "1"
+        run: |
+          if git fetch --depth=1 origin desarrollo; then
+            git worktree add --detach ../dev FETCH_HEAD
+            cp -r datos/. ../dev/datos/
+            (cd ../dev && python construir.py --paquete)
+            mkdir -p publicar/pruebas
+            cp -r ../dev/publicar/. publicar/pruebas/
+            rm -f publicar/pruebas/_headers publicar/pruebas/_redirects
+          else
+            echo "No hay rama desarrollo: solo se publica producción"
+          fi
+
+      - name: Probar la navegación en el sitio de pruebas
+        if: github.event_name != 'schedule'
+        run: |
+          if [ ! -f ../dev/pruebas/navegacion.py ]; then echo "La rama desarrollo no trae pruebas"; exit 0; fi
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+          python -m http.server 8765 --directory publicar --bind 127.0.0.1 &
+          sleep 2
+          python ../dev/pruebas/navegacion.py http://127.0.0.1:8765/pruebas/
 
       - uses: actions/upload-pages-artifact@v5
         with:

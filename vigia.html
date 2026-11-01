@@ -439,8 +439,16 @@ button.aero:hover{border-color:var(--filo-2)}
 .asesor form{display:flex;gap:6px;padding:8px 12px 12px;border-top:1px solid var(--filo)}
 .asesor input{flex:1;background:var(--noche);border:1px solid var(--filo-2);border-radius:9px;padding:7px 10px;color:var(--tinta);font-size:13px}
 .asesor form button{border:0;background:var(--sodio);color:#1A1000;border-radius:9px;padding:0 12px;font-weight:600}
-.btn-nacional{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:76px;z-index:7;border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:8px 13px;font-size:13px;color:var(--tinta);display:flex;gap:6px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.nav-mapa{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:76px;z-index:7;display:flex;gap:6px;align-items:center}
+.btn-nacional{border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:8px 13px;font-size:13px;color:var(--tinta);display:flex;gap:6px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .btn-nacional svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
+.btn-nacional[hidden],.recientes[hidden]{display:none}
+.recientes{position:absolute;right:0;bottom:calc(100% + 8px);width:min(300px,86vw);max-height:50vh;overflow:auto;background:var(--vidrio-2);backdrop-filter:blur(12px);border:1px solid var(--filo-2);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.recientes b.tit{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-3);padding:4px 6px}
+.recientes button{text-align:left;background:var(--noche);border:1px solid var(--filo-2);border-radius:9px;padding:7px 10px;color:var(--tinta)}
+.recientes button:hover,.recientes button:focus-visible{border-color:var(--sodio)}
+.recientes small{display:block;color:var(--tinta-3);font-size:11px}
+.aviso-toast.info{background:rgba(12,22,38,.96);border-color:var(--filo-2)}
 .btn-nacional:hover,.btn-asesor:hover{border-color:var(--sodio)}
 .respuesta .opciones,#lugarOpciones{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .respuesta .opciones button,#lugarOpciones button{text-align:left;background:var(--noche);border:1px solid var(--filo-2);border-radius:10px;padding:8px 11px;color:var(--tinta)}
@@ -455,7 +463,9 @@ button.aero:hover{border-color:var(--filo-2)}
   .repro .cuando{min-width:0;font-size:15px}
   .repro .resumen{display:none}
   .btn-asesor{right:12px;bottom:calc(var(--asomo) + 62px);padding:8px 11px}
-  .btn-nacional{right:12px;bottom:calc(var(--asomo) + 108px);padding:8px 11px}
+  .nav-mapa{right:12px;bottom:calc(var(--asomo) + 108px)}
+  .btn-nacional{padding:8px 11px}
+  .nav-mapa .sec span{display:none}
   .aviso-toast{top:104px}
   .btn-asesor em{display:none}
   .asesor{right:8px;left:8px;width:auto;bottom:calc(var(--asomo) + 10px);max-height:62vh}
@@ -542,7 +552,7 @@ button.aero:hover{border-color:var(--filo-2)}
   .alertas{left:calc(var(--izq) + 16px);width:min(380px,calc(100% - var(--izq) - var(--der) - 48px))}
   .capas,.gestor,.ficha,.atribucion{left:calc(var(--izq) + 16px)}
   .repro{left:calc(var(--izq) + 16px);right:calc(var(--der) + 16px)}
-  .btn-asesor,.asesor,.btn-nacional{right:calc(var(--der) + 16px)}
+  .btn-asesor,.asesor,.nav-mapa{right:calc(var(--der) + 16px)}
 }
 @media (min-width:900px) and (max-width:1199px){:root{--ancho-ctx:330px}}
 @media (min-width:1200px) and (max-width:1599px){:root{--ancho-panel:400px;--ancho-ctx:360px}}
@@ -615,7 +625,12 @@ button.aero:hover{border-color:var(--filo-2)}
     </div>
   </section>
 
-  <button class="btn-nacional" id="btnNacional" type="button" title="Volver a ver todo el Perú (tecla Inicio)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Perú</span></button>
+  <div class="nav-mapa" id="navMapa">
+    <div class="recientes" id="recientes" hidden role="dialog" aria-label="Lugares consultados"></div>
+    <button class="btn-nacional sec" id="btnRecientes" type="button" aria-expanded="false" aria-controls="recientes" title="Lugares consultados" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>Recientes</span></button>
+    <button class="btn-nacional sec" id="btnMiLugar" type="button" title="Volver a la localidad seleccionada" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Mi lugar</span></button>
+    <button class="btn-nacional" id="btnNacional" type="button" title="Volver a ver todo el Perú (tecla Inicio)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Perú</span></button>
+  </div>
   <button class="btn-asesor" id="btnAsesor" type="button" aria-expanded="false"><span>?</span><em>Asesor</em></button>
   <section class="asesor" id="asesor" hidden aria-label="Asesor de uso">
     <header><b>Asesor de VIGÍA</b><small class="meta">cómo usar la página</small><button type="button" id="cerrarAsesor" aria-label="Cerrar">×</button></header>
@@ -952,14 +967,20 @@ function bordesPaneles() {
   if (esMovil()) return { izq: 0, der: 0 };
   return { izq: $('#app').classList.contains('izq-plegado') ? 0 : $('#panel').getBoundingClientRect().width, der: $('#contexto').hidden ? 0 : $('#contexto').getBoundingClientRect().width };
 }
+// con los dos paneles abiertos al mapa le deben quedar al menos 520 px; si no (pantallas de 1024 a 1200 px),
+// el panel izquierdo se pliega solo mientras el derecho esté abierto y vuelve al cerrarlo
+const MAPA_MIN = 520;
 function abrirContexto(si) {
   if (esMovil()) return;
   $('#contexto').hidden = !si; $('#app').classList.toggle('ctx-abierto', si); document.documentElement.classList.toggle('ctx-abierto', si);
+  const css = getComputedStyle(document.documentElement), px = v => parseFloat(css.getPropertyValue(v)) || 0;
+  if (si && !document.documentElement.classList.contains('izq-plegado') && innerWidth - px('--izq') - px('--der') < MAPA_MIN) { UI.izqAuto = true; return plegarIzq(true, { guardar: false }); }
+  if (!si && UI.izqAuto) { UI.izqAuto = false; return plegarIzq(false, { guardar: false }); }
   G?.encuadre();
 }
-function plegarIzq(si) {
+function plegarIzq(si, { guardar = true } = {}) {
   $('#app').classList.toggle('izq-plegado', si); document.documentElement.classList.toggle('izq-plegado', si); $('#abrirPanel').hidden = !si;
-  try { localStorage.setItem('vigia-izq', si ? '1' : '0'); } catch {}
+  if (guardar) { UI.izqAuto = false; try { localStorage.setItem('vigia-izq', si ? '1' : '0'); } catch {} }
   G?.encuadre();
 }
 function ubicarLugar() { // el bloque del lugar vive en el panel derecho (escritorio) o en la hoja inferior (celular)
@@ -971,7 +992,8 @@ function ubicarLugar() { // el bloque del lugar vive en el panel derecho (escrit
 function abrirVista(v, { desplegar = true } = {}) {
   if (!VISTAS.includes(v)) v = 'ops';
   if (v === 'lugar' && !esMovil()) { abrirContexto(true); return; }
-  if (!esMovil() && $('#app').classList.contains('izq-plegado')) plegarIzq(false);
+  // si el izquierdo se plegó solo por falta de espacio, abrir una de sus pestañas cierra el derecho
+  if (!esMovil() && $('#app').classList.contains('izq-plegado')) { if (UI.izqAuto) abrirContexto(false); else plegarIzq(false); }
   UI.vista = v;
   for (const x of VISTAS) {
     if (x === 'lugar' && !esMovil()) continue;
@@ -1624,6 +1646,7 @@ function verDistrito(d, { volar = true } = {}) {
   if (volar) G?.encuadrar(cajaDistrito(d));
   fijarUrl(d.id);
   pintarLugar();
+  recordar({ tipo: 'distrito', obj: d });
 }
 document.getElementById('p-ops').addEventListener('click', e => {
   const t = e.target;
@@ -1890,18 +1913,47 @@ async function buscarCcpp(q) {
   return out.slice(0, 60);
 }
 // un territorio fuera de la zona norte, o un centro poblado: contorno, encuadre y pronóstico en vivo en la pestaña Lugar
+/* lugares consultados: los 10 últimos quedan en este navegador (solo nombres y códigos, nada personal) */
+let RECIENTES = (() => { try { return JSON.parse(localStorage.getItem('vigia-recientes') || '[]'); } catch { return []; } })();
+function recordar(e) {
+  if (!e?.obj) return;
+  const r = e.tipo === 'ccpp' ? { tipo: 'ccpp', n: e.obj.n, sub: nombreTipo(e), obj: e.obj } : { tipo: e.tipo, id: e.obj.id, n: e.obj.n, sub: nombreTipo(e) };
+  const k = x => x.tipo + '|' + (x.id || `${x.obj?.lat},${x.obj?.lng}`);
+  RECIENTES = [r, ...RECIENTES.filter(x => k(x) !== k(r))].slice(0, 10);
+  try { localStorage.setItem('vigia-recientes', JSON.stringify(RECIENTES)); } catch { /* sin almacenamiento */ }
+  pintarNavMapa();
+}
+function pintarNavMapa() {
+  $('#btnMiLugar').hidden = !RECIENTES.length; $('#btnRecientes').hidden = RECIENTES.length < 2;
+  $('#btnMiLugar').title = RECIENTES.length ? `Volver a ${titulo(RECIENTES[0].n)}` : '';
+  $('#recientes').innerHTML = '<b class="tit">Lugares consultados</b>' + RECIENTES.map((r, i) => `<button type="button" data-reciente="${i}"><b>${esc(titulo(r.n))}</b><small>${esc(r.sub || '')}</small></button>`).join('');
+}
+async function abrirReciente(r) {
+  if (!r) return;
+  if (r.tipo === 'ccpp') return verCentroPoblado(r.obj);
+  const buscar = () => indiceConsulta().find(x => x.tipo === r.tipo && x.obj.id === r.id);
+  const e = buscar() || (await cargarTerritorio(), buscar());
+  if (!e) return;
+  $('#txtConsulta').value = titulo(e.obj.n);
+  if (e.obj.nacional) verTerritorio(e.obj, e.tipo);
+  else if (e.tipo === 'distrito') verDistrito(e.obj);
+  else consultar(e.obj.n, e);
+}
+function cerrarRecientes(foco) { $('#recientes').hidden = true; $('#btnRecientes').setAttribute('aria-expanded', 'false'); if (foco) $('#btnRecientes').focus(); }
 function verTerritorio(o, tipo) {
   const nombres = { distrito: `Distrito · ${titulo(o.prov || '')}, ${titulo(o.dep || '')}`, provincia: `Provincia · ${titulo(o.dep || '')}`, departamento: 'Departamento' };
   UI.lugar = { n: titulo(o.n), lat: o.lat, lng: o.lng, pais: 'PE', ref: null, meta: `${nombres[tipo]} · UBIGEO ${o.id}`,
     nota: 'Fuera de la zona norte: aquí VIGÍA no calcula prioridad ni exposición. Se muestran el pronóstico en vivo y los avisos del SENAMHI que cubren el punto.' };
   G?.marcarDistrito({ poligonos: o.poligonos }); G?.marcarLugar(null);
   abrirVista('lugar'); G?.encuadrar(o.caja); fijarUrl(o.id); pintarLugar();
+  recordar({ tipo, obj: o });
 }
 function verCentroPoblado(o) {
   const d = ZD().find(x => x.id === o.id);
   UI.lugar = { n: titulo(o.n), lat: o.lat, lng: o.lng, pais: 'PE', ref: null, meta: `Centro poblado · ${titulo(o.dist)}, ${titulo(o.prov)}, ${titulo(o.dep)} (INEI)` };
   G?.marcarDistrito(d || null); G?.marcarLugar(UI.lugar);
   abrirVista('lugar'); G?.irA(o.lat, o.lng, 8); pintarLugar();
+  recordar({ tipo: 'ccpp', obj: o });
 }
 function indiceConsulta() {
   if (INDICE) return INDICE;
@@ -1921,6 +1973,61 @@ function indiceConsulta() {
 const PRIORIDAD = { aerodromo: 0, cuenca: 1, distrito: 2, provincia: 3, departamento: 4, lugar: 5 };
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const TERRITORIO = { distrito: 1, provincia: 1, departamento: 1 };
+// nombres alternativos que el INEI escribe distinto; se aplican solo si el nombre oficial está en el índice
+const ALIAS = { nazca: 'nasca', cuzco: 'cusco' };
+function conAlias(q) {
+  if (q.includes(',')) return q; // «Cuzco, Paruro» busca el centro poblado tal como se escribió
+  let t = ` ${normq(q)} `, cambio = false;
+  for (const [a, b] of Object.entries(ALIAS)) if (t.includes(` ${a} `) && indiceConsulta().some(e => e.clave === b)) { t = t.replace(` ${a} `, ` ${b} `); cambio = true; }
+  return cambio ? t.trim() : q;
+}
+// distancia de edición con transposiciones («lambayeke», «piurra», «chiclalyo»); deja de contar al pasar de max
+function distEd(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev2 = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]; let min = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (prev2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2] + 1);
+      cur.push(v); if (v < min) min = v;
+    }
+    if (min > max) return max + 1;
+    prev2 = prev; prev = cur;
+  }
+  return prev[b.length];
+}
+const PALABRAS_CONSULTA = new Set(('de del la las el los en y a al para por con que cual cuales donde como esta estan hay hoy manana pasado lluvia lluvias llueve ' +
+  'rio rios cuenca provincia departamento distrito region emergencias emergencia atender primero vienen crecidos imagen termica sobre pronostico ' +
+  'avisos aviso riesgo nivel peligro huaicos quebradas personas expuestas situacion zona norte sur centro').split(' '));
+// cómo suena: «arekipa» = «arequipa», «huancaio» = «huancayo», «nazka» = «nasca»
+const fonetica = s => s.replace(/qu/g, 'k').replace(/c([aou])/g, 'k$1').replace(/c([ei])/g, 's$1').replace(/z/g, 's').replace(/v/g, 'b')
+  .replace(/ll/g, 'y').replace(/y/g, 'i').replace(/h/g, '').replace(/(.)\1/g, '$1');
+// territorios cuyo nombre se parece a lo escrito: 1 letra de diferencia hasta 7 letras, 2 desde 8 (comparando cómo suenan)
+function sugerirLugares(q) {
+  const w = normq(q).split(' ').filter(Boolean), ventanas = new Set();
+  for (let i = 0; i < w.length; i++) for (let k = 1; k <= 3 && i + k <= w.length; k++) {
+    const v = w.slice(i, i + k);
+    if (v.every(x => PALABRAS_CONSULTA.has(x))) continue;
+    if (v.join(' ').length >= 5) ventanas.add(v.join(' '));
+  }
+  if (!ventanas.size) return [];
+  const mejor = new Map();
+  const vf = [...ventanas].map(v => [v, fonetica(v)]);
+  for (const e of indiceConsulta()) {
+    if (!TERRITORIO[e.tipo]) continue;
+    e.fon ??= fonetica(e.clave);
+    for (const [v, f] of vf) {
+      if (v === e.clave) continue; // igual: ya lo encontró la búsqueda exacta
+      const max = v.length >= 8 ? 2 : 1, d = distEd(f, e.fon, max);
+      if (d > max) continue;
+      const k = e.tipo + '|' + e.obj.id;
+      if (!mejor.has(k) || mejor.get(k).d > d) mejor.set(k, { e, d });
+    }
+  }
+  const l = [...mejor.values()].sort((a, b) => a.d - b.d || PRIORIDAD[b.e.tipo] - PRIORIDAD[a.e.tipo] || String(a.e.obj.id).localeCompare(String(b.e.obj.id)));
+  return l.filter(x => x.d === l[0]?.d).map(x => x.e).slice(0, 15);
+}
 const nombreTipo = e => e.tipo === 'ccpp' ? `Centro poblado · ${titulo(e.obj.dist)}, ${titulo(e.obj.prov)}, ${titulo(e.obj.dep)}` : e.tipo === 'distrito' ? `Distrito · ${titulo(e.obj.prov)}, ${titulo(e.obj.dep)}` : e.tipo === 'provincia' ? `Provincia · ${titulo(e.obj.dep)}` : 'Departamento';
 const ubigeoTxt = e => e.tipo === 'ccpp' ? `distrito ${e.obj.id}` : `UBIGEO ${e.obj.id}`;
 function opcionesHtml(opciones) {
@@ -1950,6 +2057,7 @@ function interpretar(q, elegido) {
   if (lugar && /emergenc|fallecid|muert|victim|damnific|indeci|coen/.test(t) && !/\bdistrito\b/.test(t)) { // «emergencias en Cajamarca» = el departamento
     const dep = indiceConsulta().find(e => e.tipo === 'departamento' && e.clave === lugar.clave);
     if (dep && lugar.tipo !== 'departamento') lugar = dep;
+    if (dep) opciones = []; // «emergencias en Tumbes» es el departamento: no se pregunta cuál
   }
   let dia = dias[0];
   if (/\bpasado manana\b/.test(t)) dia = dias[2];
@@ -1988,6 +2096,7 @@ function parrafosDistrito(d, dia, temas) {
 let OPCIONES = [];
 function consultar(q, elegido, { sinCcpp = false } = {}) {
   q = q.trim(); if (!q) return;
+  if (!elegido) q = conAlias(q);
   if (!DATA.zona) return mostrarRespuesta('<p>Faltan los datos de la zona norte en esta actualización.</p>');
   if (elegido?.tipo === 'ccpp') { cerrarRespuesta(); return verCentroPoblado(elegido.obj); }
   const { lugar, dia, temas, opciones } = interpretar(q, elegido);
@@ -2048,13 +2157,20 @@ function consultar(q, elegido, { sinCcpp = false } = {}) {
         : `<div class="envoltura-tabla"><table class="tabla"><tbody>${top.map(d => `<tr class="clic" data-abrir="${d.id}"><td><b>${esc(titulo(d.n))}</b></td><td>${chipPrio(prioridad(d, dia).nivel)}</td><td>${chipNivel(nivelDistrito(d, dia).total)}</td><td class="num">${num(lluviaDia(d, dia) || 0, 1)} mm</td></tr>`).join('')}</tbody></table></div>`}
       <div class="acciones">${lugar.tipo === 'departamento' ? `<button class="btn prim" type="button" data-filtrar="${g.dep}">Ver en Operaciones</button>` : ''}${analista}</div>`;
     // el panel pasa a Prioridad, filtrado por el departamento, y el mapa encuadra los límites
-    G?.marcarDistrito(null); UI.ops.dep = g.dep; abrirVista('ops'); G?.encuadrar(cajaDistritos(ds)); fijarUrl(g.id);
+    G?.marcarDistrito(null); UI.ops.dep = g.dep; abrirVista('ops'); G?.encuadrar(cajaDistritos(ds)); fijarUrl(g.id); recordar(lugar);
   } else if (lugar?.tipo === 'lugar') {
     const c = lugar.obj, i = c.dias.findIndex(x => x[0] === dia), dd = c.dias[i];
     html = `<div class="cab"><div><h4>${esc(c.n)}</h4><div class="sub">${nombreDia(dia)}, ${fechaCorta(dia)}</div></div>${cerrar}</div>
       <p>${dd ? `Lluvia pronosticada (ECMWF 9 km): <strong>${num(dd[4] || 0, 1)} mm</strong> · máxima ${num(dd[2])} °C, mínima ${num(dd[3])} °C.` : 'Sin pronóstico para ese día.'}</p>
       <div class="acciones"><button class="btn prim" type="button" data-lugar-abrir="${esc(c.n)}">Abrir lugar</button>${analista}</div>`;
   } else {
+    // nada reconocido: antes de la respuesta general se ofrecen los territorios que se escriben parecido
+    const sug = !elegido && !lugar ? sugerirLugares(q) : [];
+    if (sug.length) {
+      OPCIONES = sug;
+      mostrarRespuesta(`<div class="cab"><div><h4>¿Quisiste decir…?</h4><div class="sub">Ningún lugar del INEI se llama «${esc(q)}»; estos se escriben parecido</div></div>${cerrar}</div>${opcionesHtml(sug)}`);
+      $('#respuesta').dataset.q = q; return;
+    }
     const ds = ZD();
     let cuerpo;
     if (temas.has('emerg')) { const l = [...DATA.emergencias].sort((a, b) => graveEmerg(b) - graveEmerg(a) || b.fecha.localeCompare(a.fecha)); cuerpo = `<p>${l.length} emergencias reportadas por el COEN-INDECI en 30 días${l.filter(graveEmerg).length ? `, <strong>${l.filter(graveEmerg).length} mencionan víctimas</strong>` : ''}:</p><div class="envoltura-tabla"><table class="tabla"><tbody>${l.slice(0, 10).map(e => `<tr class="clic" data-emerg-abrir="${DATA.emergencias.indexOf(e)}"><td><b>${esc(e.evento)}</b><small>${esc(titulo(e.lugar))} · ${esc(titulo(e.dep))} · ${fechaCorta(e.fecha.slice(0, 10))}</small></td><td>${graveEmerg(e) ? '<span class="victima">víctimas</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`; }
@@ -2533,8 +2649,8 @@ function avisarNuevas() {
     try { new Notification('VIGÍA · ' + (nuevas.length === 1 ? 'nueva alerta' : `${nuevas.length} alertas nuevas`), { body: nuevas.slice(0, 4).map(a => `${a.titulo}: ${a.det}`).join('\n') }); } catch { /* el navegador no lo permite */ }
   }
 }
-function avisoToast(html, ms = 9000) {
-  const t = document.createElement('div'); t.className = 'aviso-toast'; t.setAttribute('role', 'status'); t.innerHTML = html;
+function avisoToast(html, ms = 9000, clase = '') {
+  const t = document.createElement('div'); t.className = ('aviso-toast ' + clase).trim(); t.setAttribute('role', 'status'); t.innerHTML = html;
   document.body.append(t); setTimeout(() => t.remove(), ms); t.onclick = () => t.remove();
 }
 $('#alertas').addEventListener('click', e => {
@@ -2757,7 +2873,7 @@ async function iniciarMapa() {
   const cont = $('#mapa'); cont.hidden = false;
   const map = new ml.Map({
     container: cont, attributionControl: false, renderWorldCopies: false, maxZoom: 18.5, minZoom: 1.2, fadeDuration: 0,
-    center: [-79, -7], zoom: 2.2, dragRotate: false, pitchWithRotate: false, touchPitch: false,
+    center: [-75, -9.3], zoom: 2.2, dragRotate: false, pitchWithRotate: false, touchPitch: false,
     style: { version: 8, projection: { type: 'globe' }, sky: { 'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0] },
       sources: {}, layers: [{ id: 'fondo', type: 'background', paint: { 'background-color': '#03060D' } }] },
   });
@@ -3210,8 +3326,7 @@ async function iniciarMapa() {
   /* --- arranque --- */
   reconstruir();
   mostrarLluvia(UI.lluvia.producto);
-  const ZC = ZD().length ? cajaDistritos(ZD()) : CAJA_PERU;
-  if (!UI.inicioPropio) setTimeout(() => { if (!map.isMoving()) encuadrar([ZC[0] - 0.05, ZC[1] - 0.05, ZC[2] + 0.05, ZC[3] + 0.05], { ms: 2400 }); }, 250);
+  if (!UI.inicioPropio) setTimeout(() => { if (!map.isMoving()) encuadrar(CAJA_PERU, { ms: 2400 }); }, 250);
   $('#cargando').hidden = true;
   return {
     motor: 'mapa', mapa: map,
@@ -4059,7 +4174,7 @@ async function iniciarGlobo() {
 
   /* --- bucle --- */
   const intro = !reducido;
-  const cajaI = ZC ? [ZC.lo0, ZC.la0, ZC.lo1, ZC.la1] : CAJA_PERU;
+  const cajaI = CAJA_PERU;
   if (intro) setTimeout(() => { if (!vuelo && !UI.inicioPropio) encuadrar(cajaI, { ms: 2600 }); }, 350);
   else xyz((cajaI[1] + cajaI[3]) / 2, (cajaI[0] + cajaI[2]) / 2, distanciaCaja(cajaI), camera.position);
   const camPrev = new THREE.Vector3();
@@ -4372,8 +4487,14 @@ function arrancar() {
   // ?lugar=UBIGEO abre ese territorio en vez de la vista inicial
   const ubigeoUrl = new URLSearchParams(location.search).get('lugar');
   const territorioUrl = ubigeoUrl && indiceConsulta().find(e => TERRITORIO[e.tipo] && e.obj.id === ubigeoUrl);
-  if (ubigeoUrl && /^\d{2}(\d{2}){0,2}$/.test(ubigeoUrl)) UI.inicioPropio = true;
+  if (ubigeoUrl) UI.inicioPropio = true;
   $('#btnNacional').onclick = () => { G?.vistaNacional(); fijarUrl(null); };
+  $('#btnMiLugar').onclick = () => abrirReciente(RECIENTES[0]);
+  $('#btnRecientes').onclick = () => { if (!$('#recientes').hidden) return cerrarRecientes(); $('#recientes').hidden = false; $('#btnRecientes').setAttribute('aria-expanded', 'true'); $('#recientes button')?.focus(); };
+  $('#recientes').addEventListener('click', e => { const b = e.target.closest('[data-reciente]'); if (b) { cerrarRecientes(); abrirReciente(RECIENTES[+b.dataset.reciente]); } });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#recientes').hidden) cerrarRecientes(true); });
+  addEventListener('pointerdown', e => { if (!$('#recientes').hidden && !e.target.closest('#navMapa')) cerrarRecientes(); });
+  pintarNavMapa();
   addEventListener('keydown', e => { if (e.key === 'Home' && !e.target.closest?.('input,textarea,select')) { e.preventDefault(); G?.vistaNacional(); } });
   if (new URLSearchParams(location.search).has('prueba')) window.VIGIA_PRUEBA = { get G() { return G; }, consultar, indice: indiceConsulta, cajaDistrito, cajaDistritos, UI, cargarTerritorio, buscarCcpp };
   // MapLibre (mapa con proyección de globo) en la web; el globo three.js dentro de Claude, en archivo local, sin WebGL2 o con ?motor=globo
@@ -4387,7 +4508,13 @@ function arrancar() {
   }) : iniciarGlobo()).then(g => {
     G = g; if (UI.lugar) G.marcarLugar(UI.lugar); if (UI.cuenca) G.marcarCuenca(UI.cuenca); aplicarAlertasGlobo(); G.mundo(DATA.mundo);
     if (territorioUrl) territorioUrl.tipo === 'distrito' ? verDistrito(territorioUrl.obj) : consultar(territorioUrl.obj.n, territorioUrl);
-    else if (UI.inicioPropio) cargarTerritorio().then(() => { const e = indiceConsulta().find(x => TERRITORIO[x.tipo] && x.obj.id === ubigeoUrl); if (e) verTerritorio(e.obj, e.tipo); else G.vistaNacional(); });
+    else if (ubigeoUrl) cargarTerritorio().then(T => {
+      const e = indiceConsulta().find(x => TERRITORIO[x.tipo] && x.obj.id === ubigeoUrl);
+      if (e) return verTerritorio(e.obj, e.tipo);
+      G.vistaNacional(); fijarUrl(null);
+      avisoToast(T ? `El código UBIGEO <b>${esc(ubigeoUrl)}</b> de la dirección no existe en el índice del INEI. Se muestra todo el Perú.`
+        : 'No se pudo cargar el índice territorial para comprobar el lugar de la dirección. Se muestra todo el Perú.', 9000, 'info');
+    });
     setTimeout(cargarTerritorio, 1500); // el índice nacional llega después, sin frenar la primera vista
   }).catch(err => {
     console.error(err);

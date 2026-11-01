@@ -16,6 +16,12 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 # dirección pública; en GitHub Actions la fija la variable VIGIA_SITIO
 SITIO = os.environ.get("VIGIA_SITIO", "https://vigia-pe.netlify.app").rstrip("/")
+# VIGIA_PRUEBAS=1 arma el sitio de pruebas (rama desarrollo): sin indexar y con una marca visible
+PRUEBAS = os.environ.get("VIGIA_PRUEBAS") == "1"
+MARCA_PRUEBAS = ('<meta name="robots" content="noindex,nofollow">'
+                 '<style>.marca-pruebas{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:40;pointer-events:none;'
+                 'background:#5a1d00;color:#ffd9b0;border:1px solid #ff8a3d;border-radius:999px;padding:3px 12px;'
+                 'font:600 11px/1.4 system-ui,sans-serif;letter-spacing:.04em}</style>')
 DESCRIPCION = ("El Niño Costero en el norte del Perú: lluvias, crecidas de ríos, emergencias y "
                "distritos a atender primero. Datos públicos de ENFEN, SENAMHI, INDECI, GloFAS y ECMWF.")
 ICONO = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
@@ -39,7 +45,9 @@ ESQUELETO = (
     "<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}"
     "body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>"
     f'<script>window.VIGIA_SITIO = "{SITIO}";</script>'
-    "</head><body>\n"
+    + (MARCA_PRUEBAS if PRUEBAS else "")
+    + "</head><body>\n"
+    + ('<div class="marca-pruebas" role="note">ENTORNO DE PRUEBAS · no usar para decisiones</div>\n' if PRUEBAS else "")
 )
 CABECERAS = """/*
   X-Content-Type-Options: nosniff
