@@ -214,3 +214,41 @@ Recolector del SENAMHI en la nube (reemplaza la tarea de la PC)
 - La prueba automática no cubre todavía el celular ni el globo 3D.
 
 **Para pasar a producción:** unir `desarrollo` en `main` (`git merge desarrollo` y `git push`). El flujo publica solo.
+
+---
+
+## 9. Fase 3, primera parte: situación nacional (1 de noviembre de 2026)
+
+**Objetivo:** que el tablero muestre todo el Perú con datos verificables, y que las tarjetas filtren el mapa.
+
+**Dónde verlo:** https://victor73917.github.io/vigia/pruebas/, en la pestaña *Prioridad*, arriba.
+
+| Pieza | Qué hace | Fuente |
+|---|---|---|
+| Cruce nacional | Para cada uno de los 1 873 distritos del INEI y cada día: nivel del aviso de lluvia (el centro del distrito cae dentro de la zona del aviso), nivel de quebradas (por nombre de departamento, provincia y distrito) y emergencias de 30 días (por UBIGEO). Se calcula una vez por día, en unos 70 ms | SENAMHI, COEN-INDECI, INEI |
+| Tarjeta «Departamentos con aviso de lluvia» | Cuenta departamentos y distritos por nivel y nombra los avisos. Al pulsarla, pinta y encuadra esos distritos | SENAMHI |
+| Tarjeta «Quebradas» | Distritos con posible activación. Si el aviso no cubre ese día, muestra «–», no 0 | SENAMHI |
+| Tarjeta «Emergencias · 30 días» | Total, departamentos y cuántas mencionan víctimas. Pinta los distritos afectados | COEN-INDECI |
+| Tarjeta «Ríos con crecida» | Dice explícitamente que solo cubre 20 ríos de la costa norte | GloFAS |
+| Tarjeta «Reportes ciudadanos · misiones · recursos» | **No disponible**, porque no existe el servidor seguro. No muestra cifras simuladas | — |
+| Tabla de departamentos | Los 25 departamentos, ordenables por aviso, distritos con aviso, quebradas y emergencias. Un clic lleva al departamento | Las mismas |
+| Fecha de cada fuente | Cada tarjeta dice cuánto hace que se actualizó su fuente. Si pasa de un día, lo marca «desactualizado» en naranja | — |
+
+**Cómo se evita el «verde falso»:** la tabla dice «sin aviso», nunca «sin riesgo». La nota aclara que la falta de aviso no significa que no haya peligro.
+
+**Pruebas ejecutadas**
+
+Navegador local, a 1366×800 y 375×812:
+- Hoy: 12 departamentos y 564 distritos con aviso (54 naranja y 510 amarillo, avisos 445 y 448).
+- Mañana: 16 departamentos y 823 distritos.
+- 82 distritos con quebradas, 45 emergencias en 4 departamentos.
+- El filtro pinta 564 distritos; el de emergencias, 43, y encuadra el norte. «Quitar filtro» deja 0.
+- La tabla se reordena al tocar las columnas.
+- Sin errores en la consola.
+- En el celular la página no se desborda.
+
+**Limitaciones**
+- El cruce usa el centro del distrito: un distrito grande que el aviso cubre solo en parte puede quedar fuera, o al revés.
+- El globo 3D de respaldo no dibuja el filtro, y lo avisa.
+- La «población expuesta» sigue siendo solo del norte (SENAMHI, aviso de quebradas), así que no se suma a nivel nacional.
+- Faltan en esta fase: la franja inferior con la línea de tiempo, el modo claro y el selector de modo de trabajo.
