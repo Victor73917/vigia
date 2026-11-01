@@ -71,14 +71,22 @@ El flujo `.github/workflows/publicar.yml` hace solo lo que antes había que hace
 - Cada cambio de código que se sube a `main` también se publica.
 - Desde la pestaña *Actions* del repositorio se puede correr a mano («Run workflow») y elegir las fuentes.
 
-**Fuentes que solo responden desde el Perú.** Los avisos y quebradas del SENAMHI y el ENFEN no contestan a los servidores de GitHub. Los baja esta PC:
+**El SENAMHI y el ENFEN, a través de Cloudflare.** Esas dos fuentes no contestan a los servidores de GitHub, pero sí a la red de Cloudflare. Por eso GitHub las pide por un puente:
 
-- La tarea programada de Windows «VIGIA datos Peru» corre `subir-peru.bat` a los :05 de cada hora.
-- Ese archivo los sube a la rama `datos-peru`, que siempre tiene un solo commit.
-- La corrida de GitHub de los :17 los toma de ahí.
-- El registro queda en `datos/peru.log`.
-- Si la PC está apagada, esos datos se quedan con su última fecha, y la página la muestra.
-- Para quitar la tarea: `schtasks /Delete /TN "VIGIA datos Peru" /F`.
+- **Qué es:** el Worker `vigia-puente` de la cuenta de Cloudflare `Claudecode13213@gmail.com`, en <https://vigia-puente.claudecode13213.workers.dev>. Su código está en `nube/puente-peru.js`.
+- **Cómo lo usa el recolector:** con la variable `VIGIA_PROXY`, que fija el flujo, `recolectar.py` pide por el puente todo lo que va a `www.senamhi.gob.pe`, `idesep.senamhi.gob.pe` y `enfen.imarpe.gob.pe`.
+- **Qué atiende:** solo las direcciones que usa VIGÍA:
+  - las páginas de avisos y de quebradas;
+  - las consultas de lectura `GetFeature` a las capas `g_aviso`, `g_acti_quebrada` y `g_carto_fundamento`;
+  - la portada del ENFEN.
+
+  Todo lo demás responde 403.
+- **Caché:** cada respuesta queda 10 minutos en la caché de Cloudflare.
+- **Comprobar el puente:** <https://vigia-puente.claudecode13213.workers.dev/estado> dice si llega a cada fuente. Con `?estricto` responde 503 si alguna falla.
+- **Costo:** el plan gratuito de Workers permite unas 100 000 solicitudes al día, y VIGÍA usa unas cien.
+- **Clave opcional:** si se agrega al Worker el secreto `CLAVE`, el puente la exige. Hay que poner el mismo valor en el secreto `VIGIA_PROXY_CLAVE` de GitHub.
+- **Si el puente falla:** esas fuentes se quedan con su última fecha, y la página la muestra.
+- **Respaldo manual:** `subir-peru.bat` sube los datos desde una PC en el Perú a la rama `datos-peru`, y el flujo usa esos datos si son más nuevos. La tarea programada que lo corría se eliminó el 1 de noviembre de 2026: VIGÍA ya no depende de ninguna PC.
 
 Si el recolector avisa que el ENFEN publicó un comunicado nuevo, hay que actualizar a mano `ENFEN_RESUMEN` en `recolectar.py` y subir el cambio.
 
