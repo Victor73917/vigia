@@ -1,5 +1,6 @@
 <title>VIGÍA El Niño</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<script>try { if (localStorage.getItem('vigia-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch { /* sin almacenamiento */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -27,9 +28,10 @@
   --f-dato:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
   --gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
   --ancho-panel:440px; --asomo:178px; --ancho-ctx:400px;
-  --izq:var(--ancho-panel); --der:0px;
+  --izq:var(--ancho-panel); --der:0px; --franja:0px;
   color-scheme:dark;
 }
+:root.franja-abierta{--franja:134px}
 html,body{height:100%}
 body{background:var(--abismo);color:var(--tinta);font-family:var(--f-texto);font-size:15px;line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased}
 button,input,textarea{font:inherit;color:inherit}
@@ -90,7 +92,7 @@ a{color:var(--sat);text-underline-offset:2px}
 .capa em{font-style:normal;font-family:var(--f-dato);font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--tinta-2)}
 
 /* ---------- ficha de selección ---------- */
-.ficha{position:absolute;left:var(--gl);bottom:30px;width:320px;max-width:calc(100% - 32px);z-index:5;background:var(--vidrio-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--filo-2);border-radius:14px;padding:14px 14px 12px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.ficha{position:absolute;left:var(--gl);bottom:calc(30px + var(--franja));width:320px;max-width:calc(100% - 32px);z-index:5;background:var(--vidrio-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--filo-2);border-radius:14px;padding:14px 14px 12px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
 .ficha .cerrar{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:var(--tinta-2);font-size:18px;line-height:1}
 .ficha .cerrar:hover{background:var(--filo)}
 .ficha .eyebrow{font-family:var(--f-dato);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);display:flex;gap:8px;align-items:center}
@@ -360,7 +362,7 @@ button.aero:hover{border-color:var(--filo-2)}
 .sim .resultado div{border:1px solid var(--filo);border-radius:10px;padding:8px 10px;min-width:0}
 .sim .resultado small{display:block;font-family:var(--f-dato);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3)}
 .sim .resultado b{font-family:var(--f-titulo);font-size:22px;font-weight:700;line-height:1.05;overflow-wrap:anywhere}
-.atribucion{position:absolute;left:var(--gl);bottom:8px;z-index:3;font-family:var(--f-dato);font-size:10px;color:var(--tinta-3);text-shadow:0 1px 2px #000}
+.atribucion{position:absolute;left:var(--gl);bottom:calc(8px + var(--franja));z-index:3;font-family:var(--f-dato);font-size:10px;color:var(--tinta-3);text-shadow:0 1px 2px #000}
 .atribucion a{color:var(--tinta-2)}
 .etq.rio{font-family:var(--f-texto);font-style:italic;font-size:12px;font-weight:500;color:#A8DCFF;letter-spacing:.02em}
 .etq.cuenca{font-family:var(--f-titulo);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(170,240,215,.9)}
@@ -409,7 +411,7 @@ button.aero:hover{border-color:var(--filo-2)}
 .alertas[data-plegado="true"] ul{display:none}
 #app.repro-abierto .ficha{bottom:170px}
 /* reproductor de escenarios */
-.repro{position:absolute;left:var(--gl);right:calc(var(--ancho-panel) + 16px);bottom:26px;z-index:5;display:flex;justify-content:center;pointer-events:none}
+.repro{position:absolute;left:var(--gl);right:calc(var(--ancho-panel) + 16px);bottom:calc(26px + var(--franja));z-index:5;display:flex;justify-content:center;pointer-events:none}
 .repro>*{pointer-events:auto}
 .repro .abrir{border:1px solid rgba(91,192,255,.55);background:var(--vidrio-2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:999px;padding:9px 16px;font-size:13px;color:var(--tinta);display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .repro .abrir b{color:var(--lluvia)}
@@ -429,10 +431,51 @@ button.aero:hover{border-color:var(--filo-2)}
 .repro .resumen button small{color:var(--tinta-3);font-family:var(--f-dato);font-size:10.5px}
 .repro .escala{display:flex;align-items:center;gap:6px;font-family:var(--f-dato);font-size:10px;color:var(--tinta-3)}
 .repro .escala i{display:inline-block;width:16px;height:8px;border-radius:2px}
+
+/* ---------- línea de tiempo: 30 días atrás y los días con aviso ---------- */
+.franja{position:absolute;left:var(--gl);right:var(--gr);bottom:10px;box-sizing:border-box;height:124px;z-index:5;background:var(--vidrio-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--filo-2);border-radius:14px;padding:6px 10px 6px;display:flex;flex-direction:column;gap:3px;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.franja[hidden]{display:none}
+.franja header{display:flex;align-items:center;gap:10px;font-size:12px;min-width:0}
+.franja header b{font-family:var(--f-titulo);font-size:14px;letter-spacing:.04em;text-transform:uppercase;flex:none}
+.franja header small{color:var(--tinta-3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.franja header button{border:0;background:transparent;color:var(--tinta-3);font-size:18px;line-height:1;padding:0 4px;flex:none}
+.ley-franja{display:flex;gap:10px;flex:none;font-size:10.5px;color:var(--tinta-2)}
+.ley-franja i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.ley-franja i.sin,.tiempo .col>i.sin{background:repeating-linear-gradient(135deg,var(--tinta-3) 0 1px,transparent 1px 4px);opacity:.7}
+.tiempo{display:grid;grid-template-columns:auto 1fr;gap:0 8px;min-width:0}
+.tiempo .rotulos{display:grid;grid-template-rows:14px repeat(4,13px);gap:2px;font-size:10.5px;color:var(--tinta-2);white-space:nowrap}
+.tiempo .rotulos span{line-height:13px}
+.tiempo .cols{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;min-width:0}
+.tiempo .col{position:relative;display:grid;grid-template-rows:14px repeat(4,13px);gap:2px;border:0;border-radius:4px;background:transparent;padding:0 1px;min-width:0}
+.tiempo .col[aria-disabled="true"]{cursor:default}
+.tiempo .col:not([aria-disabled="true"]):hover{background:var(--sodio-tenue)}
+.tiempo .col.hoy{box-shadow:inset 0 0 0 1px var(--sodio)}
+.tiempo .col.elegido{background:var(--sodio-tenue)}
+.tiempo .fecha{font-family:var(--f-dato);font-size:9.5px;color:var(--tinta-3);line-height:14px;text-align:center;overflow:hidden;white-space:nowrap}
+.tiempo .hoy .fecha{color:var(--sodio);font-weight:600}
+.tiempo .col>i{display:block;border-radius:2px;background:var(--filo)}
+.tiempo .col>i[style*="--c"]{background:var(--c)}
+.tiempo .col>i.futuro{background:transparent}
+.tiempo .col>i.em{position:relative;background:transparent;font-style:normal;font-family:var(--f-dato);font-size:9px;line-height:13px;text-align:center;color:var(--tinta);z-index:0}
+.tiempo .col>i.em::before{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h);border-radius:2px;background:var(--naranja);opacity:.75;z-index:-1}
+.tiempo .col>i.em.grave::before{background:var(--rojo);opacity:.9}
+.tiempo .enfen{position:absolute;top:1px;right:1px;width:6px;height:6px;transform:rotate(45deg);background:var(--sat)}
+.tiempo .enfen.prox{background:transparent;border:1px solid var(--sat)}
+.tiempo-ops{margin-top:-4px}
+.tiempo-ops .tiempo .fecha{font-size:9px}
+
+/* ---------- modo de trabajo y tema ---------- */
+.modo-fila{display:flex;align-items:center;gap:10px;padding:10px 16px 2px var(--gl);font-family:var(--f-dato);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);flex:none}
+.modo-trabajo{background:var(--noche);border:1px solid var(--filo-2);border-radius:8px;padding:4px 8px;font-family:var(--f-texto);font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--tinta)}
+.modo-trabajo option{background:var(--noche);color:var(--tinta)}
+.btn-tema{flex:none;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--filo-2);background:var(--vidrio);border-radius:50%;color:var(--tinta-2);padding:0}
+.btn-tema svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.btn-tema:hover,.modo-trabajo:hover{border-color:var(--sodio)}
+.nota-modo{border-left:3px solid var(--sodio);padding:6px 10px;background:var(--sodio-tenue);border-radius:0 8px 8px 0;font-size:12.5px;color:var(--tinta-2)}
 /* asesor */
-.btn-asesor{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:26px;z-index:7;border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:9px 14px;font-size:13px;color:var(--tinta);display:flex;gap:7px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.btn-asesor{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:calc(26px + var(--franja));z-index:7;border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:9px 14px;font-size:13px;color:var(--tinta);display:flex;gap:7px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .btn-asesor span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--sodio);color:#1A1000;font-weight:800;font-size:12px}
-.asesor{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:76px;z-index:8;width:min(380px,calc(100% - 32px));max-height:min(560px,calc(100% - 120px));display:flex;flex-direction:column;background:var(--vidrio-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--filo-2);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);overflow:hidden}
+.asesor{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:calc(76px + var(--franja));z-index:8;width:min(380px,calc(100% - 32px));max-height:min(560px,calc(100% - 120px));display:flex;flex-direction:column;background:var(--vidrio-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--filo-2);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);overflow:hidden}
 .asesor[hidden]{display:none}
 .asesor header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--filo)}
 .asesor header b{font-family:var(--f-titulo);font-size:16px;letter-spacing:.04em}
@@ -449,7 +492,7 @@ button.aero:hover{border-color:var(--filo-2)}
 .asesor form{display:flex;gap:6px;padding:8px 12px 12px;border-top:1px solid var(--filo)}
 .asesor input{flex:1;background:var(--noche);border:1px solid var(--filo-2);border-radius:9px;padding:7px 10px;color:var(--tinta);font-size:13px}
 .asesor form button{border:0;background:var(--sodio);color:#1A1000;border-radius:9px;padding:0 12px;font-weight:600}
-.nav-mapa{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:76px;z-index:7;display:flex;gap:6px;align-items:center}
+.nav-mapa{position:absolute;right:calc(var(--ancho-panel) + 16px);bottom:calc(76px + var(--franja));z-index:7;display:flex;gap:6px;align-items:center}
 .btn-nacional{border:1px solid var(--filo-2);background:var(--vidrio-2);border-radius:999px;padding:8px 13px;font-size:13px;color:var(--tinta);display:flex;gap:6px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .btn-nacional svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
 .btn-nacional[hidden],.recientes[hidden]{display:none}
@@ -568,6 +611,40 @@ button.aero:hover{border-color:var(--filo-2)}
 @media (min-width:1200px) and (max-width:1599px){:root{--ancho-panel:400px;--ancho-ctx:360px}}
 @media (min-width:900px){.aviso-toast{top:64px;left:auto;right:calc(var(--der) + 16px);transform:none;max-width:420px}}
 @media (max-width:899px){.plegar-panel,.abrir-panel{display:none}}
+@media (min-width:900px){.franja{left:calc(var(--izq) + 16px);right:calc(var(--der) + 16px)} .tiempo-ops{display:none}}
+@media (min-width:900px) and (max-width:1599px){:root.ctx-abierto .relojes{display:none}}
+@media (max-width:899px){
+  :root.franja-abierta{--franja:0px}
+  .franja,#btnFranja{display:none!important}
+  .modo-fila{padding:0 var(--gr) 6px var(--gl)}
+  .btn-tema{width:28px;height:28px}
+}
+@media (max-width:420px){.relojes{display:none}}
+
+/* ---------- modo claro: mismos rótulos, superficies de papel; los colores del mapa no cambian ---------- */
+:root[data-tema="claro"]{
+  --abismo:#E6ECF4; --noche:#FFFFFF; --vidrio:rgba(255,255,255,.88); --vidrio-2:rgba(250,252,255,.95);
+  --filo:rgba(20,40,80,.14); --filo-2:rgba(20,40,80,.30);
+  --tinta:#0D1626; --tinta-2:#38475E; --tinta-3:#56637A;
+  --sodio:#C46F00; --sodio-tenue:rgba(196,111,0,.12);
+  --sat:#0A6A94; --lluvia:#1F73C9; --verde:#16884A; --amarillo:#A88000; --naranja:#D97400; --rojo:#D42A2A;
+  color-scheme:light;
+}
+:root[data-tema="claro"] .panel{background:linear-gradient(180deg,rgba(248,250,253,.96),rgba(239,243,249,.97))}
+:root[data-tema="claro"] .contexto{background:linear-gradient(180deg,rgba(248,250,253,.96),rgba(239,243,249,.98))}
+:root[data-tema="claro"] .kpi,:root[data-tema="claro"] .aero,:root[data-tema="claro"] .aviso,:root[data-tema="claro"] .emerg{background:rgba(10,30,70,.025)}
+:root[data-tema="claro"] .tabla tr.clic:hover td,:root[data-tema="claro"] .atencion button:hover{background:rgba(10,30,70,.04)}
+:root[data-tema="claro"] .buscador input,:root[data-tema="claro"] .form-pregunta textarea,:root[data-tema="claro"] .asesor .el{background:#fff}
+:root[data-tema="claro"] .aviso-toast{background:#FDECEC;color:#5A0E0E}
+:root[data-tema="claro"] .aviso-toast.info{background:rgba(255,255,255,.98);color:var(--tinta)}
+:root[data-tema="claro"] .atribucion{text-shadow:0 0 3px #fff,0 0 2px #fff;color:var(--tinta-2)}
+:root[data-tema="claro"] .marca,:root[data-tema="claro"] .relojes{background:var(--vidrio);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--filo-2);border-radius:999px;padding:4px 14px 4px 6px}
+:root[data-tema="claro"] .relojes{padding:3px 14px}
+:root[data-tema="claro"] .alertas .cab{background:rgba(253,236,236,.95);border-color:rgba(212,42,42,.55)}
+:root[data-tema="claro"] .alertas .cab.vigila{background:rgba(255,243,224,.95);border-color:rgba(217,116,0,.55)}
+:root[data-tema="claro"] .alertas .cab.calma{background:var(--vidrio);border-color:var(--filo-2)}
+:root[data-tema="claro"] .etq{--tinta:#E8EDF5;--tinta-2:#A9B6C9;--sat:#7FE7FF;--sodio:#FFB547}
+:root[data-tema="claro"] .fondo-cielo{background:radial-gradient(120% 90% at 35% 45%,#DCE6F2 0%,#E6ECF4 60%)}
 </style>
 
 <div id="app">
@@ -597,6 +674,7 @@ button.aero:hover{border-color:var(--filo-2)}
       <div><small>Lima</small><span id="horaLima">--:--</span></div>
       <div><small>UTC</small><span id="horaUtc">--:--</span></div>
     </div>
+    <button class="btn-tema" id="btnTema" type="button" aria-pressed="false" title="Cambiar a modo claro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span class="visualmente-oculto">Modo claro</span></button>
     <button class="chip-datos" id="chipDatos" type="button" title="Ver de dónde salen los datos"><i></i><span id="chipTexto">Datos</span></button>
     <button class="campana" id="btnAvisos" type="button" aria-expanded="false" aria-controls="alertas" title="Alertas automáticas de VIGÍA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="cuenta" id="cuentaAvisos"></span><span class="visualmente-oculto">Alertas</span></button>
   </header>
@@ -635,10 +713,16 @@ button.aero:hover{border-color:var(--filo-2)}
     </div>
   </section>
 
+  <section class="franja" id="franja" aria-label="Línea de tiempo" hidden>
+    <header><b>Línea de tiempo</b><small id="metaFranja"></small><span class="ley-franja"><span><i style="--c:var(--rojo)"></i>rojo</span><span><i style="--c:var(--naranja)"></i>naranja</span><span><i style="--c:var(--amarillo)"></i>amarillo</span><span><i class="sin"></i>sin registro</span></span><button type="button" id="cerrarFranja" aria-label="Ocultar la línea de tiempo">×</button></header>
+    <div id="cuerpoFranja"></div>
+  </section>
+
   <div class="nav-mapa" id="navMapa">
     <div class="recientes" id="recientes" hidden role="dialog" aria-label="Lugares consultados"></div>
     <button class="btn-nacional sec" id="btnRecientes" type="button" aria-expanded="false" aria-controls="recientes" title="Lugares consultados" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>Recientes</span></button>
     <button class="btn-nacional sec" id="btnMiLugar" type="button" title="Volver a la localidad seleccionada" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Mi lugar</span></button>
+    <button class="btn-nacional sec" id="btnFranja" type="button" aria-pressed="false" aria-controls="franja" title="Mostrar u ocultar la línea de tiempo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M7 8v8M12 6v12M17 9v6"/></svg><span>Tiempo</span></button>
     <button class="btn-nacional" id="btnNacional" type="button" title="Volver a ver todo el Perú (tecla Inicio)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Perú</span></button>
   </div>
   <button class="btn-asesor" id="btnAsesor" type="button" aria-expanded="false"><span>?</span><em>Asesor</em></button>
@@ -653,6 +737,7 @@ button.aero:hover{border-color:var(--filo-2)}
 
   <aside class="panel" id="panel" data-estado="asomo" aria-label="Panel de información">
     <button class="asa" id="asa" type="button" aria-label="Agrandar o achicar el panel"></button>
+    <div class="modo-fila"><label for="modoTrabajo">Modo de trabajo</label><select class="modo-trabajo" id="modoTrabajo" title="Qué capas y secciones se muestran"></select></div>
     <div class="pestanas" role="tablist" aria-label="Secciones">
       <button class="plegar-panel" id="plegarPanel" type="button" aria-label="Ocultar el panel de secciones" title="Ocultar el panel">‹</button>
       <button role="tab" id="t-ops" aria-controls="p-ops" aria-selected="true" data-vista="ops">Prioridad</button>
@@ -666,7 +751,9 @@ button.aero:hover{border-color:var(--filo-2)}
     <div class="cuerpo" id="cuerpo">
       <section class="vista" id="p-ops" role="tabpanel" aria-labelledby="t-ops">
         <div><h2>Situación nacional</h2><p class="meta" id="metaNac"></p></div>
+        <p class="nota-modo" id="notaModo" hidden></p>
         <div class="fila-chips" id="diasOps" role="group" aria-label="Día del pronóstico"></div>
+        <div class="tiempo-ops" id="tiempoOps" aria-label="Línea de tiempo"></div>
         <div class="kpis" id="kpisNac" aria-live="polite"></div>
         <p class="nota filtro-nac" id="filtroNac" hidden></p>
         <h3>Departamentos</h3>
@@ -836,9 +923,12 @@ const DESDE_ENFEN = { Lima: 'diciembre', Callao: 'diciembre' };
 
 let COL = {};
 function leerColores() {
-  const cs = getComputedStyle(document.documentElement);
+  // el mapa y el globo usan siempre la paleta oscura (se dibujan sobre imagen satelital), también en modo claro
+  const raiz = document.documentElement, tema = raiz.dataset.tema; delete raiz.dataset.tema;
+  const cs = getComputedStyle(raiz);
   for (const k of ['sup', 'int', 'pro', 'fuego', 'tormenta', 'hielo', 'volcan', 'inunda', 'verde', 'amarillo', 'naranja', 'rojo', 'sodio', 'sat', 'calido', 'frio', 'neutro', 'lluvia', 'tinta', 'tinta-2', 'tinta-3'])
     COL[k] = cs.getPropertyValue('--' + k).trim();
+  if (tema) raiz.dataset.tema = tema;
 }
 leerColores();
 function colorAnom(a) { // divergente: frío, gris neutro, cálido
@@ -1690,7 +1780,7 @@ function pintarNacional({ encuadrar = false } = {}) {
   const tarjeta = (k, titulo_, valor, detalle, fuente) => `<button class="kpi" type="button" data-filtro="${k}" aria-pressed="${UI.nac.filtro === k}"><small>${titulo_}</small><b>${valor}</b><span>${detalle}</span>${fuente}</button>`;
   $('#kpisNac').innerHTML =
     tarjeta('avisos', 'Departamentos con aviso de lluvia', num(depsAviso.length),
-      dsAviso.length ? `${num(dsAviso.length)} distritos · ${porNivel.map((n, i) => n ? `<span style="color:${COL[NIVEL_AVISO[4 - i].c]}">${n} ${NIVEL_AVISO[4 - i].n}</span>` : '').filter(Boolean).join(' · ')}` : 'Ningún aviso de lluvia del SENAMHI para ese día',
+      dsAviso.length ? `${num(dsAviso.length)} distritos · ${porNivel.map((n, i) => n ? `<span style="color:var(--${NIVEL_AVISO[4 - i].c})">${n} ${NIVEL_AVISO[4 - i].n}</span>` : '').filter(Boolean).join(' · ')}` : 'Ningún aviso de lluvia del SENAMHI para ese día',
       fuenteHtml(`SENAMHI${R.numerosAviso.length ? ' · aviso N° ' + R.numerosAviso.join(', ') : ''}`, 'avisos')) +
     tarjeta('quebradas', 'Distritos con posible activación de quebradas', qv ? num(dsQueb.length) : '–',
       qv ? `aviso N° ${esc(q.numero)} · nivel máximo ${NIVEL_AVISO[q.nivel]?.n || '–'}${R.sinUbicar ? ` · ${R.sinUbicar} puntos sin distrito del INEI` : ''}` : 'Sin aviso de quebradas vigente ese día',
@@ -1711,7 +1801,7 @@ function pintarNacional({ encuadrar = false } = {}) {
 }
 
 function pintarOps() {
-  pintarNacional();
+  pintarNacional(); pintarFranja();
   const z = DATA.zona;
   if (!z) { $('#kpisPrio').innerHTML = '<p class="vacio">Faltan los datos de la zona norte: ejecuta «Actualizar datos».</p>'; return; }
   if (!UI.ops.dia || !diasOps().includes(UI.ops.dia)) UI.ops.dia = diasOps()[0];
@@ -1763,7 +1853,7 @@ document.getElementById('p-ops').addEventListener('click', e => {
   if (t.closest('[data-quitar-filtro]')) { UI.nac.filtro = null; return pintarNacional(); }
   const or = t.closest('[data-orden]'); if (or) { UI.nac.orden = or.dataset.orden; return pintarNacional(); }
   const dn = t.closest('[data-dep-nac]'); if (dn) { const en = indiceConsulta().find(x => x.tipo === 'departamento' && x.obj.id === dn.dataset.depNac); if (en) { $('#txtConsulta').value = titulo(en.obj.n); consultar(en.obj.n, en); } return; }
-  const dia = t.closest('[data-dia]'); if (dia) { UI.ops.dia = dia.dataset.dia; UI.lluvia.dia = diasAvisos().includes(UI.ops.dia) ? UI.ops.dia : UI.lluvia.dia; pintarOps(); pintarCapas(); G?.distritos(); G?.avisos(UI.lluvia.dia); return; }
+  const dia = t.closest('[data-dia]'); if (dia) return elegirDiaOps(dia.dataset.dia);
   const mp = t.closest('[data-mapa]'); if (mp) { UI.ops.mapa = mp.dataset.mapa; UI.capas.distritos = true; pintarCapas(); G?.capas(); G?.distritos(); pintarOps(); return; }
   const ir = t.closest('[data-ir]'); if (ir) return abrirVista(ir.dataset.ir);
   const dep = t.closest('[data-dep]'); if (dep) { UI.ops.dep = dep.dataset.dep; pintarOps(); const ds = ZD().filter(d => UI.ops.dep === 'todos' || d.dep === UI.ops.dep); if (ds.length) G?.encuadrar(cajaDistritos(ds)); return; }
@@ -1773,6 +1863,114 @@ document.getElementById('p-ops').addEventListener('click', e => {
   if (t.closest('#btnTermica')) { UI.capas.termica = !UI.capas.termica; pintarCapas(); G?.capas(); pintarOps(); }
 });
 document.getElementById('p-ops').addEventListener('input', e => { if (e.target.id === 'opTermica') { UI.termica.opacidad = e.target.value / 100; G?.termicaOpacidad(UI.termica.opacidad); } });
+function elegirDiaOps(f) {
+  UI.ops.dia = f; UI.lluvia.dia = diasAvisos().includes(f) ? f : UI.lluvia.dia;
+  pintarOps(); pintarCapas(); G?.distritos(); G?.avisos(UI.lluvia.dia);
+}
+
+/* ---------------- línea de tiempo ---------------- */
+// 30 días hacia atrás (lo que publica el COEN-INDECI) y los días que cubren los avisos vigentes del SENAMHI.
+// La actualización solo trae los avisos vigentes: los días anteriores al primero se marcan «sin registro», no «sin aviso».
+function datosFranja(atras) {
+  const hoy = hoyLima(), t0 = Date.parse(hoy + 'T12:00:00-05:00');
+  const finAv = DATA.avisos.reduce((m, a) => a.fin > m ? a.fin : m, hoy);
+  const adelante = clamp(Math.round((Date.parse(finAv + 'T12:00:00-05:00') - t0) / DIA), 3, 6);
+  const lluvia = avisosLluvia(), otros = DATA.avisos.filter(a => !a.lluvia), q = DATA.quebradas;
+  const desde = xs => xs.reduce((m, a) => !m || a.inicio < m ? a.inicio : m, null);
+  const dLl = desde(lluvia), dOt = desde(otros), dQ = q?.inicio ? isoLima(Date.parse(q.inicio)) : null;
+  const dias = [];
+  for (let i = -atras; i <= adelante; i++) {
+    const f = isoLima(t0 + i * DIA);
+    const ll = lluvia.map(a => ({ a, n: a.dias.find(d => d.fecha === f)?.nivel || 0 })).filter(x => x.n >= 2);
+    const ot = otros.filter(a => a.inicio <= f && f <= a.fin);
+    const em = f <= hoy ? DATA.emergencias.filter(e => e.fecha.slice(0, 10) === f) : null;
+    dias.push({
+      f, lluvia: Math.max(0, ...ll.map(x => x.n)), avLl: ll.map(x => x.a), sinLl: !dLl || f < dLl,
+      otros: Math.max(0, ...ot.map(a => a.nivel)), avOt: ot, sinOt: !dOt || f < dOt,
+      queb: vigQuebradaEnDia(f) ? q.nivel : 0, sinQ: !dQ || f < dQ,
+      em, grave: em ? em.filter(graveEmerg).length : 0,
+      enfen: DATA.enfen?.fecha === f ? 'pub' : DATA.enfen?.proximo === f ? 'prox' : '',
+    });
+  }
+  return { dias, hoy, dLl };
+}
+function htmlFranja(atras) {
+  const { dias, hoy } = datosFranja(atras), ops = diasOps(), sel = UI.ops.dia || ops[0];
+  const maxEm = Math.max(1, ...dias.map(d => d.em?.length || 0));
+  const celda = (n, sin) => sin ? '<i class="sin"></i>' : n >= 2 ? `<i style="--c:${colorNivel(n)}"></i>` : '<i></i>';
+  const nv = (n, sin, avs) => sin ? 'sin registro en esta actualización' : n >= 2 ? `${NIVEL_AVISO[n].n}${avs ? ` (N° ${avs.map(a => a.numero).join(', ')})` : ''}` : 'sin aviso';
+  const cols = dias.map(d => {
+    const accion = ops.includes(d.f) ? 'dia' : d.em?.length ? 'emerg' : '';
+    const t = [`${d.f === hoy ? 'Hoy, ' : ''}${fechaCorta(d.f)}`,
+      `Lluvia (SENAMHI): ${nv(d.lluvia, d.sinLl, d.avLl)}`,
+      `Otros avisos: ${d.sinOt ? 'sin registro en esta actualización' : d.avOt.length ? d.avOt.map(a => `N° ${a.numero} ${a.titulo.toLowerCase()}`).join('; ') : 'ninguno'}`,
+      `Quebradas: ${nv(d.queb, d.sinQ)}`,
+      d.em ? `Emergencias (COEN-INDECI): ${d.em.length}${d.grave ? `, ${d.grave} mencionan víctimas` : ''}` : 'Emergencias: día futuro',
+      d.enfen === 'pub' ? `Comunicado ENFEN N° ${DATA.enfen.numero}` : d.enfen === 'prox' ? 'Próximo comunicado del ENFEN' : '',
+      accion === 'dia' ? 'Toca para ver ese día en el tablero' : accion === 'emerg' ? 'Toca para ver las emergencias' : ''].filter(Boolean).join(' · ');
+    const dd = +d.f.slice(8), rot = d.f === hoy ? 'hoy' : dd === 1 ? fecha(Date.parse(d.f + 'T12:00:00-05:00')).replace(/\.$/, '') : dd;
+    return `<button type="button" class="col${d.f === hoy ? ' hoy' : ''}${d.f === sel && accion === 'dia' ? ' elegido' : ''}" ${accion ? `data-franja="${accion}" data-f="${d.f}"` : 'aria-disabled="true"'} title="${esc(t)}" aria-label="${esc(t)}">
+      <span class="fecha">${rot}</span>${celda(d.lluvia, d.sinLl)}${celda(d.otros, d.sinOt)}${celda(d.queb, d.sinQ)}${d.em ? `<i class="em${d.grave ? ' grave' : ''}" style="--h:${d.em.length ? Math.round(30 + 70 * d.em.length / maxEm) : 0}%">${d.em.length || ''}</i>` : '<i class="futuro"></i>'}${d.enfen ? `<b class="enfen ${d.enfen}"></b>` : ''}</button>`;
+  }).join('');
+  return `<div class="tiempo"><div class="rotulos" aria-hidden="true"><span></span><span>Lluvia</span><span>Otros avisos</span><span>Quebradas</span><span>Emergencias</span></div><div class="cols">${cols}</div></div>`;
+}
+function pintarFranja() {
+  const { dLl } = datosFranja(0), ec = DATA.enfen;
+  $('#metaFranja').textContent = `SENAMHI ${haceCuanto(FRESCO.avisos.t)}${dLl ? ` · avisos registrados desde el ${fechaCorta(dLl)}` : ' · sin avisos en esta actualización'} · COEN-INDECI ${haceCuanto(FRESCO.emergencias.t)}${ec ? ` · ◆ ENFEN N° ${ec.numero}` : ''}`;
+  $('#cuerpoFranja').innerHTML = htmlFranja(29);
+  $('#tiempoOps').innerHTML = `<h3>Línea de tiempo · 2 semanas</h3>${htmlFranja(13)}`;
+}
+for (const id of ['#cuerpoFranja', '#tiempoOps']) $(id).addEventListener('click', e => {
+  const b = e.target.closest('[data-franja]'); if (!b) return;
+  if (b.dataset.franja === 'emerg') return abrirVista('emergencias');
+  if (UI.vista !== 'ops') abrirVista('ops', { desplegar: false });
+  elegirDiaOps(b.dataset.f);
+});
+function abrirFranja(si, guardar = true) {
+  $('#franja').hidden = !si; document.documentElement.classList.toggle('franja-abierta', si);
+  $('#btnFranja').setAttribute('aria-pressed', si);
+  if (guardar) try { localStorage.setItem('vigia-franja', si ? '1' : '0'); } catch { /* sin almacenamiento */ }
+  G?.encuadre?.();
+}
+$('#cerrarFranja').onclick = () => abrirFranja(false);
+$('#btnFranja').onclick = () => abrirFranja($('#franja').hidden);
+abrirFranja((() => { try { return localStorage.getItem('vigia-franja') !== '0'; } catch { return true; } })(), false);
+
+/* ---------------- modo de trabajo y tema ---------------- */
+// cada modo es un juego de capas y secciones: no cambia los datos ni oculta avisos oficiales
+const MODOS = {
+  vigilancia: { n: 'Vigilancia', vista: 'ops', d: '' },
+  respuesta: { n: 'Respuesta', vista: 'ops', on: ['avisos', 'emergencias', 'distritos', 'rios', 'expuestos'], off: ['nino', 'mundo', 'lluvia', 'termica'], sin: ['nino'],
+    d: 'Modo respuesta: avisos, emergencias, ríos y población expuesta en el mapa; se ocultan El Niño y los desastres en el mundo.' },
+  clima: { n: 'Análisis climático', vista: 'nino', on: ['nino', 'lluvia', 'avisos', 'mundo'], off: ['distritos', 'expuestos', 'emergencias'],
+    d: 'Modo análisis climático: El Niño, lluvia pronosticada, avisos y desastres en el mundo; los distritos y las emergencias quedan apagados en el mapa.' },
+};
+function aplicarModo(k, { guardar = true, abrir = true } = {}) {
+  const m = MODOS[k] || MODOS.vigilancia; k = MODOS[k] ? k : 'vigilancia'; UI.modo = k;
+  for (const c of CAPAS) UI.capas[c.id] = m.on?.includes(c.id) ? true : m.off?.includes(c.id) ? false : !c.off;
+  for (const v of ['nino']) $('#t-' + v).hidden = !!m.sin?.includes(v);
+  $('#modoTrabajo').value = k;
+  $('#notaModo').hidden = !m.d; $('#notaModo').textContent = m.d;
+  pintarCapas(); G?.capas(); if (UI.capas.avisos) G?.avisos(UI.lluvia.dia);
+  if (abrir || m.sin?.includes(UI.vista)) abrirVista(m.vista, { desplegar: false });
+  if (guardar) try { localStorage.setItem('vigia-modo', k); } catch { /* sin almacenamiento */ }
+}
+$('#modoTrabajo').innerHTML = Object.entries(MODOS).map(([k, m]) => `<option value="${k}">${esc(m.n)}</option>`).join('');
+$('#modoTrabajo').addEventListener('change', e => aplicarModo(e.target.value));
+function pintarTema() {
+  const claro = document.documentElement.dataset.tema === 'claro';
+  $('#btnTema').setAttribute('aria-pressed', claro);
+  $('#btnTema').title = claro ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+  $('#btnTema').querySelector('.visualmente-oculto').textContent = claro ? 'Modo oscuro' : 'Modo claro';
+  $('#btnTema svg').innerHTML = claro ? '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>' : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+}
+$('#btnTema').onclick = () => {
+  const claro = document.documentElement.dataset.tema !== 'claro';
+  if (claro) document.documentElement.dataset.tema = 'claro'; else delete document.documentElement.dataset.tema;
+  try { localStorage.setItem('vigia-tema', claro ? 'claro' : 'oscuro'); } catch { /* sin almacenamiento */ }
+  pintarTema();
+};
+pintarTema();
 function verAerodromo(a) {
   if (!a) return;
   const m = a.metar, cat = m?.fltCat;
@@ -3362,7 +3560,7 @@ async function iniciarMapa() {
     if (esMovil()) { const top = $('#panel').getBoundingClientRect().top - r.top; return { top: 150, bottom: clamp(H - top, 0, H * 0.5), left: 0, right: 0 }; }
     const { izq, der } = bordesPaneles(), ce = $('#capas');
     const capasDer = ce && ce.offsetParent ? Math.max(0, ce.getBoundingClientRect().right - r.left) : 0;
-    return { top: 64, bottom: 64, left: Math.max(izq, capasDer), right: der };
+    return { top: 64, bottom: $('#franja').hidden ? 64 : $('#franja').offsetHeight + 34, left: Math.max(izq, capasDer), right: der };
   }
   function encuadre() { map.resize(); map.setPadding(libreBordes()); }
   addEventListener('resize', encuadre);
@@ -4593,10 +4791,11 @@ function relojes() {
 function arrancar() {
   if (!S.generado) { $('#cargando').textContent = 'Faltan los datos: ejecuta recolectar.py'; }
   pintarLluvia(); pintarOps(); pintarCapas(); pintarNino(); pintarChip();
+  try { const m = localStorage.getItem('vigia-modo'); if (MODOS[m]) aplicarModo(m, { guardar: false, abrir: false }); } catch { /* sin almacenamiento */ }
   indiceConsulta();
   UI.lugar = (() => { const p = DATA.clima.find(c => c.n === 'Piura'); return p ? { n: p.n, lat: p.lat, lng: p.lng, pais: p.pais, ref: p } : null; })();
   const h = location.hash.replace('#', '');
-  abrirVista(VISTAS.includes(h) ? h : 'ops', { desplegar: false });
+  abrirVista(VISTAS.includes(h) ? h : MODOS[UI.modo]?.vista || 'ops', { desplegar: false });
   relojes(); setInterval(relojes, 1000);
   pintarAlertas(); pintarMundo(); addEventListener('resize', acomodarCapas);
   // el analista solo funciona dentro de Claude: en la web se quita la pestaña
