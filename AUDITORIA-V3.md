@@ -251,4 +251,24 @@ Navegador local, a 1366×800 y 375×812:
 - El cruce usa el centro del distrito: un distrito grande que el aviso cubre solo en parte puede quedar fuera, o al revés.
 - El globo 3D de respaldo no dibuja el filtro, y lo avisa.
 - La «población expuesta» sigue siendo solo del norte (SENAMHI, aviso de quebradas), así que no se suma a nivel nacional.
-- Faltan en esta fase: la franja inferior con la línea de tiempo, el modo claro y el selector de modo de trabajo.
+- La línea de tiempo, el modo claro y los modos de trabajo se agregaron en la segunda parte (sección 10).
+
+## 10. Fase 3, segunda parte: línea de tiempo, modo claro y modos de trabajo (1 de noviembre de 2026)
+
+| Pieza | Qué hace | Fuente |
+|---|---|---|
+| Línea de tiempo (franja inferior, escritorio) | Una columna por día, desde hace 29 días hasta el último día con aviso vigente (de 3 a 6 días adelante). Filas: lluvia, otros avisos (temperatura y viento), quebradas y emergencias por día (en rojo si mencionan víctimas). El rombo marca el comunicado del ENFEN y el próximo. Tocar un día de hoy a +3 cambia el tablero a ese día; tocar un día pasado con emergencias abre la pestaña Emergencias. Se puede ocultar con «Tiempo» | SENAMHI, COEN-INDECI, ENFEN |
+| «Sin registro» | La actualización solo trae los avisos vigentes. Los días anteriores al primer aviso registrado se rayan como «sin registro en esta actualización», nunca como «sin aviso» | — |
+| Línea de tiempo (celular) | Versión de dos semanas dentro de la pestaña Prioridad | Las mismas |
+| Modo claro | Botón de luna o sol en la barra, y se recuerda en el navegador. Los paneles pasan a fondo claro; el mapa, sus etiquetas y los colores oficiales de los avisos no cambian | — |
+| Modos de trabajo | Selector arriba del panel. *Vigilancia* (todo); *Respuesta* (avisos, emergencias, ríos y expuestos; oculta El Niño y el mundo); *Análisis climático* (El Niño, lluvia pronosticada, avisos y mundo; abre la pestaña El Niño). Solo cambia capas y secciones, nunca los datos | — |
+
+**Pruebas ejecutadas** en el navegador local, a 1440×900 y 375×812:
+- 33 días en la franja.
+- Hoy aparece con lluvia en naranja (avisos 445 y 448) y quebradas en rojo (aviso 304, vigente hasta el 1 de noviembre a las 13:00).
+- Al tocar el 2 de noviembre, el tablero pasa a «Mañana», con 16 departamentos.
+- Los tres modos encienden y apagan las capas esperadas.
+- El modo claro es legible en la barra, en las alertas, en el panel y en el lugar.
+- Con el panel derecho abierto, el buscador conserva 303 px.
+- En el celular la página no se desborda y la versión de dos semanas tiene 17 días.
+- Sin errores en la consola.
