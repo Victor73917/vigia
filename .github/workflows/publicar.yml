@@ -6,7 +6,8 @@
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
 # Producción (/vigia/) se arma siempre desde main. La rama desarrollo se arma en /vigia/pruebas/, con los mismos datos
 # y una marca de «entorno de pruebas». En los cambios de código (push o a mano) corre la prueba automática de navegación
-# sobre el sitio de pruebas y, si falla, no se publica nada.
+# sobre el sitio de pruebas y, si falla, no se publica nada. GitHub Pages solo publica desde main: un cambio en desarrollo
+# corre las pruebas y, si pasan, pide a main que vuelva a publicar (producción sigue con el código de main).
 name: Recolectar y publicar VIGÍA
 
 on:
@@ -24,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
   pages: write
   id-token: write
 
@@ -126,12 +128,20 @@ jobs:
           sleep 2
           python ../dev/pruebas/navegacion.py http://127.0.0.1:8765/pruebas/
 
-      - uses: actions/upload-pages-artifact@v5
+      - name: Pedir a main que publique el sitio de pruebas
+        if: github.ref_name == 'desarrollo'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publicar.yml --repo "${{ github.repository }}" --ref main -f fuentes=nada
+
+      - if: github.ref_name == 'main'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: publicar
 
   publicar:
     needs: recolectar
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
