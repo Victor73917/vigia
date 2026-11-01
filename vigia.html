@@ -3593,7 +3593,8 @@ async function iniciarMapa() {
     const fs = map.queryRenderedFeatures([[pt.x - radio, pt.y - radio], [pt.x + radio, pt.y + radio]], { layers: capasClic() });
     if (!fs.length) return null;
     const rango = f => ORDEN_CLIC.indexOf(f.layer.id.replace('-grupo', ''));
-    fs.sort((a, b) => rango(a) - rango(b) || Math.hypot(...map.project(a.geometry.coordinates).toArray().map((v, i) => v - [pt.x, pt.y][i])) - Math.hypot(...map.project(b.geometry.coordinates).toArray().map((v, i) => v - [pt.x, pt.y][i])));
+    const lejos = f => { if (f.geometry.type !== 'Point') return 0; const p = map.project(f.geometry.coordinates); return Math.hypot(p.x - pt.x, p.y - pt.y); };
+    fs.sort((a, b) => rango(a) - rango(b) || lejos(a) - lejos(b));
     const f = fs[0];
     if (f.properties.cluster) return { grupo: true, f, k: f.layer.id.replace(/^p-|-grupo$/g, '') };
     const r = PUNTOS[f.properties.t]?.[f.properties.i];
