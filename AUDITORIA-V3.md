@@ -178,3 +178,39 @@ Recolector del SENAMHI en la nube (reemplaza la tarea de la PC)
 | 7 | **Portal ciudadano** (sin DNI en el piloto) | Definir el titular de los datos y aprobar el plan Pro antes de recibir reportes reales |
 | 8 | **Analista IA** en la web pública | Clave de la API de Claude como secreto, más un límite de gasto |
 | 9 | **Validación** (pruebas integrales, seguridad, móvil) y publicación controlada | Tu aprobación para pasar a producción |
+
+---
+
+## 8. Resultado de la fase 2 (estabilización), 31 de octubre de 2026
+
+**Objetivo:** corregir la navegación y la búsqueda sin tocar la versión publicada, y crear el entorno de pruebas.
+
+**Dónde verlo:** https://victor73917.github.io/vigia/pruebas/ (rama `desarrollo`, con la marca «Entorno de pruebas»). Producción, en https://victor73917.github.io/vigia/, sigue con el código anterior.
+
+| Problema | Solución | Archivo |
+|---|---|---|
+| A-04 vista inicial en el norte | La página arranca y encuadra todo el Perú | `vigia.html` |
+| A-05 búsqueda sin tolerancia | Nombres alternativos (Nazca→Nasca, Cuzco→Cusco) y tarjeta «¿Quisiste decir…?». Compara cómo suena (qu/k, c/s, z/s, v/b, ll/y/i, h muda) y admite 1 letra de diferencia hasta 7 letras y 2 desde 8 | `vigia.html` |
+| A-06 UBIGEO inválido | Aviso «El código UBIGEO … no existe en el índice del INEI» y vista nacional | `vigia.html` |
+| A-07 sin regreso ni historial | Botones «Mi lugar» y «Recientes» (10 últimos lugares, guardados solo en el navegador). Escape y clic fuera cierran la lista | `vigia.html` |
+| Mapa angosto en pantallas de 1024 px | Con los dos paneles abiertos el mapa quedaba en 334 px. Ahora el izquierdo se pliega solo si quedan menos de 520 px (pasa a 694 px) y vuelve al cerrar el derecho; no cambia la preferencia guardada | `vigia.html` |
+| «Emergencias en Tumbes» preguntaba cuál Tumbes | Va directo al departamento | `vigia.html` |
+| A-11 sin entorno de pruebas | Rama `desarrollo` → `/pruebas/`, sin indexar. Un cambio en desarrollo corre la prueba automática y, si pasa, pide a main que publique | `.github/workflows/publicar.yml`, `construir.py` |
+| — | Prueba automática: Chromium sin ventana, 27 lugares de todas las regiones, un centro poblado, 7 errores de escritura y un UBIGEO inválido | `pruebas/navegacion.py` |
+
+**Pruebas ejecutadas**
+
+1. **Navegador local, 1024×768 y diseño de celular**
+   - 22 lugares: 17 departamentos, provincias y distritos de costa, sierra y selva. Los 22 quedan dentro del área libre.
+   - Vista inicial: el Perú entero, con 86 % del ancho libre.
+   - «lambayeke», «arekipa», «huancaio», «nazka», «kusko», «chiclallo», «moyobanba» y «tarapotto» ofrecen el lugar correcto.
+   - Las consultas de ejemplo («¿Dónde atender primero?», «Río Piura», «Provincia de Sullana») siguen funcionando igual.
+2. **GitHub Actions, corrida #19:** `pruebas/navegacion.py` terminó sin fallas.
+3. **Sitio publicado `/pruebas/?lugar=999999`:** muestra el aviso y la vista nacional.
+
+**Limitaciones**
+- La tolerancia a errores cubre departamentos, provincias y distritos. En centros poblados solo funciona la coincidencia exacta o por el comienzo del nombre.
+- «Puerto Maldonado» con error de escritura no se sugiere, porque no es un distrito (el distrito es Tambopata).
+- La prueba automática no cubre todavía el celular ni el globo 3D.
+
+**Para pasar a producción:** unir `desarrollo` en `main` (`git merge desarrollo` y `git push`). El flujo publica solo.
