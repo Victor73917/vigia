@@ -271,6 +271,16 @@ button.kpi:hover{border-color:var(--filo-2)}
 .fila-chips button small{font-family:var(--f-dato);font-size:10.5px;color:var(--tinta-3)}
 .fila-chips button[aria-pressed="true"]{border-color:var(--sodio);color:var(--tinta);background:var(--sodio-tenue)}
 .kpis.tres{grid-template-columns:repeat(3,1fr)}
+.kpi[data-filtro]{cursor:pointer}
+.kpi[data-filtro]:hover,.kpi[data-filtro]:focus-visible{border-color:var(--filo-2)}
+.kpi[aria-pressed="true"]{border-color:var(--sodio);box-shadow:inset 0 0 0 1px var(--sodio)}
+.kpi.no-disp b{color:var(--tinta-3);font-size:22px}
+.kpi .fuente{font-family:var(--f-dato);font-size:10px;letter-spacing:.06em;color:var(--tinta-3);margin-top:3px}
+.kpi .fuente.viejo{color:var(--naranja)}
+.filtro-nac{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tabla-nac th button{all:unset;cursor:pointer;color:inherit}
+.tabla-nac th button:focus-visible{outline:1px solid var(--sodio)}
+.tabla-nac th[aria-sort] button::after{content:" ↓";color:var(--sodio)}
 #diasOps{display:grid;grid-template-columns:repeat(4,1fr)}
 #diasOps button{min-width:0}
 @media (min-width:900px) and (max-width:1599px){.chip-datos .largo{display:none}.marca small{display:none}}
@@ -655,8 +665,14 @@ button.aero:hover{border-color:var(--filo-2)}
     </div>
     <div class="cuerpo" id="cuerpo">
       <section class="vista" id="p-ops" role="tabpanel" aria-labelledby="t-ops">
-        <div><h2>Dónde atender primero</h2><p class="meta" id="metaOps"></p></div>
+        <div><h2>Situación nacional</h2><p class="meta" id="metaNac"></p></div>
         <div class="fila-chips" id="diasOps" role="group" aria-label="Día del pronóstico"></div>
+        <div class="kpis" id="kpisNac" aria-live="polite"></div>
+        <p class="nota filtro-nac" id="filtroNac" hidden></p>
+        <h3>Departamentos</h3>
+        <div class="envoltura-tabla" id="tablaNac"></div>
+        <p class="nota" id="notaNac"></p>
+        <div><h2>Prioridad de atención · zona norte</h2><p class="meta" id="metaOps"></p></div>
         <div class="fila-chips" id="depsOps" role="group" aria-label="Departamento"></div>
         <div class="kpis tres" id="kpisPrio"></div>
         <div class="kpis" id="kpisExp"></div>
@@ -872,6 +888,7 @@ const CAPAS = [
 const UI = {
   capas: Object.fromEntries(CAPAS.map(c => [c.id, !c.off])),
   vista: 'ops', seleccion: null,
+  nac: { filtro: null, orden: 'aviso' }, // tarjeta nacional que filtra el mapa y orden de la tabla de departamentos
   lugar: null,
   lluvia: { producto: '24h', dia: null },
   ops: { dia: null, dep: 'todos', todos: false, mapa: 'prioridad' },
@@ -1603,13 +1620,105 @@ function prioridad(d, dia) {
 const limpiarPrioridad = () => _prio.clear();
 const chipPrio = n => n >= 1 ? `<span class="nivel-chip" style="--c:var(--${NIVEL_PRIO[n].c})">${NIVEL_PRIO[n].n}</span>` : '<span class="nivel-chip sin">baja</span>';
 
+/* ---------------- situación nacional ---------------- */
+// Cruza los 1 873 distritos del INEI (datos/territorio.json) con tres fuentes oficiales de todo el país:
+// avisos de lluvia del SENAMHI (el centro del distrito dentro de la zona del aviso de ese día), aviso de activación
+// de quebradas del SENAMHI (por nombre de departamento, provincia y distrito) y emergencias del COEN-INDECI (por UBIGEO).
+// Que un distrito no tenga aviso no significa que no tenga riesgo: la tabla dice «sin aviso», nunca «sin riesgo».
+const CACHE_NAC = new Map(); // un cruce por día
+function resumenNacional(dia) {
+  if (!TERR) return null;
+  if (CACHE_NAC.get(dia)?.datos === DATA) return CACHE_NAC.get(dia);
+  const nomDep = new Map(TERR.departamentos.map(t => [t[0], t[1]])), nomProv = new Map(TERR.provincias.map(t => [t[0], t[1]]));
+  const zonas = avisosLluvia().flatMap(a => (a.dias.find(d => d.fecha === dia)?.zonas || []).map(z => ({ nivel: z.nivel, poligonos: z.poligonos, numero: a.numero, caja: cajaPoligonos(z.poligonos) })));
+  const dist = new Map(), porNombre = new Map();
+  for (const [id, n, , [lng, lat], poligonos] of TERR.distritos) {
+    let aviso = 0; const numeros = new Set();
+    for (const z of zonas) if (enCaja(lng, lat, z.caja) && z.poligonos.some(p => dentroPoligono(lng, lat, p))) { aviso = Math.max(aviso, z.nivel); numeros.add(z.numero); }
+    const d = { id, n, dep: nomDep.get(id.slice(0, 2)), prov: nomProv.get(id.slice(0, 4)), lat, lng, poligonos, aviso, numeros: [...numeros], quebrada: 0, emerg: [] };
+    dist.set(id, d); porNombre.set(`${normq(d.dep)}|${normq(d.prov)}|${normq(n)}`, d);
+  }
+  let sinUbicar = 0;
+  if (vigQuebradaEnDia(dia)) for (const [, , nivel, dep, prov, n] of DATA.quebradas?.distritos || []) {
+    const d = porNombre.get(`${normq(dep)}|${normq(prov)}|${normq(n)}`);
+    if (d) d.quebrada = Math.max(d.quebrada, nivel); else sinUbicar++;
+  }
+  const emergDep = new Map();
+  for (const e of DATA.emergencias) {
+    const ds = (e.distritos || []).map(id => dist.get(id)).filter(Boolean);
+    for (const d of ds) d.emerg.push(e);
+    const dep = ds[0]?.id.slice(0, 2) || TERR.departamentos.find(t => normq(t[1]) === normq(e.dep))?.[0];
+    if (dep) emergDep.set(dep, [...(emergDep.get(dep) || []), e]);
+  }
+  const deps = TERR.departamentos.map(([id, n]) => {
+    const ds = [...dist.values()].filter(d => d.id.startsWith(id)), em = emergDep.get(id) || [];
+    return { id, n, total: ds.length, aviso: Math.max(0, ...ds.map(d => d.aviso)), conAviso: ds.filter(d => d.aviso >= 2).length,
+      porNivel: [4, 3, 2].map(k => ds.filter(d => d.aviso === k).length), quebrada: ds.filter(d => d.quebrada >= 2).length, emerg: em.length, victimas: em.filter(graveEmerg).length };
+  });
+  const r = { dia, datos: DATA, dist, deps, sinUbicar, numerosAviso: [...new Set(zonas.map(z => z.numero))] };
+  CACHE_NAC.set(dia, r);
+  return r;
+}
+const FILTROS_NAC = {
+  avisos: { n: 'distritos con aviso de lluvia del SENAMHI', nivel: d => d.aviso, color: n => COL[NIVEL_AVISO[n].c] },
+  quebradas: { n: 'distritos con posible activación de quebradas', nivel: d => d.quebrada, color: n => COL[NIVEL_AVISO[n].c] },
+  emergencias: { n: 'distritos con emergencias reportadas por el COEN-INDECI (30 días)', nivel: d => d.emerg.length ? (d.emerg.some(graveEmerg) ? 4 : 3) : 0, color: n => COL[n >= 4 ? 'rojo' : 'naranja'] },
+};
+// «hace 3 h» con aviso si la fuente no se actualiza desde hace más de un día
+function fuenteHtml(nombre, k) {
+  const t = FRESCO[k]?.t, viejo = t && Date.now() - t > DIA;
+  return `<span class="fuente${viejo ? ' viejo' : ''}">${nombre}${t ? ` · ${viejo ? 'desactualizado, ' : ''}${haceCuanto(t)}` : ' · sin fecha'}</span>`;
+}
+function pintarFiltroNacional(encuadrar = false) {
+  const R = resumenNacional(UI.ops.dia), f = FILTROS_NAC[UI.nac.filtro];
+  if (!R || !f) { G?.nacional?.([]); $('#filtroNac').hidden = true; return; }
+  const ds = [...R.dist.values()].filter(d => f.nivel(d) >= 2);
+  const dibujado = G?.nacional?.(ds.map(d => ({ poligonos: d.poligonos, c: f.color(f.nivel(d)), a: 0.22 + 0.08 * (f.nivel(d) - 2) })));
+  $('#filtroNac').hidden = false;
+  $('#filtroNac').innerHTML = `<span>Mapa filtrado: <b>${num(ds.length)}</b> ${f.n}${dibujado === false ? ' (el globo de respaldo no puede dibujarlo; usa el mapa)' : ''}.</span><button class="btn" type="button" data-quitar-filtro>Quitar filtro</button>`;
+  if (encuadrar && ds.length && dibujado) G.encuadrar(cajaDistritos(ds)); // solo al elegir la tarjeta, no en cada repintado
+}
+function pintarNacional({ encuadrar = false } = {}) {
+  const dia = UI.ops.dia || diasOps()[0], R = resumenNacional(dia);
+  $('#metaNac').textContent = `Todo el Perú · ${TERR ? `${num(TERR.distritos.length)} distritos del INEI` : 'cargando los límites del INEI…'} · ${nombreDia(dia)}, ${fechaCorta(dia)}`;
+  if (!R) { $('#kpisNac').innerHTML = '<p class="vacio">Cargando el índice territorial del INEI para cruzarlo con los avisos…</p>'; $('#tablaNac').innerHTML = ''; return; }
+  const dsAviso = [...R.dist.values()].filter(d => d.aviso >= 2), depsAviso = R.deps.filter(d => d.conAviso);
+  const porNivel = [4, 3, 2].map(k => dsAviso.filter(d => d.aviso === k).length);
+  const qv = vigQuebradaEnDia(dia), dsQueb = [...R.dist.values()].filter(d => d.quebrada >= 2), q = DATA.quebradas;
+  const em = DATA.emergencias, depsEm = R.deps.filter(d => d.emerg), vict = em.filter(graveEmerg).length;
+  const crecidas = DATA.cuencas.filter(c => (estadoCuenca(c)?.nivel || 0) >= 2).length;
+  const tarjeta = (k, titulo_, valor, detalle, fuente) => `<button class="kpi" type="button" data-filtro="${k}" aria-pressed="${UI.nac.filtro === k}"><small>${titulo_}</small><b>${valor}</b><span>${detalle}</span>${fuente}</button>`;
+  $('#kpisNac').innerHTML =
+    tarjeta('avisos', 'Departamentos con aviso de lluvia', num(depsAviso.length),
+      dsAviso.length ? `${num(dsAviso.length)} distritos · ${porNivel.map((n, i) => n ? `<span style="color:${COL[NIVEL_AVISO[4 - i].c]}">${n} ${NIVEL_AVISO[4 - i].n}</span>` : '').filter(Boolean).join(' · ')}` : 'Ningún aviso de lluvia del SENAMHI para ese día',
+      fuenteHtml(`SENAMHI${R.numerosAviso.length ? ' · aviso N° ' + R.numerosAviso.join(', ') : ''}`, 'avisos')) +
+    tarjeta('quebradas', 'Distritos con posible activación de quebradas', qv ? num(dsQueb.length) : '–',
+      qv ? `aviso N° ${esc(q.numero)} · nivel máximo ${NIVEL_AVISO[q.nivel]?.n || '–'}${R.sinUbicar ? ` · ${R.sinUbicar} puntos sin distrito del INEI` : ''}` : 'Sin aviso de quebradas vigente ese día',
+      fuenteHtml('SENAMHI', 'quebradas')) +
+    tarjeta('emergencias', 'Emergencias reportadas · 30 días', num(em.length),
+      `en ${depsEm.length} departamentos${vict ? ` · <strong style="color:var(--rojo)">${vict} mencionan víctimas</strong>` : ''}`, fuenteHtml('COEN-INDECI', 'emergencias')) +
+    `<button class="kpi" type="button" data-ir="rios"><small>Ríos con crecida pronosticada</small><b>${num(crecidas)}</b><span>de ${DATA.cuencas.length} ríos de la costa norte. El resto del país aún no tiene esta vigilancia</span>${fuenteHtml('GloFAS', 'cuencas')}</button>` +
+    `<div class="kpi no-disp"><small>Reportes ciudadanos · misiones · recursos</small><b>No disponible</b><span>Requiere el servidor seguro del centro de comando (fase 6). No se muestran cifras simuladas</span></div>`;
+  const ord = UI.nac.orden, val = {
+    aviso: d => d.aviso * 1e6 + d.conAviso * 1e3 + d.emerg, conAviso: d => d.conAviso, quebrada: d => d.quebrada, emerg: d => d.emerg * 10 + d.victimas, n: d => -d.n.charCodeAt(0),
+  }[ord] || (d => 0);
+  const filas = [...R.deps].sort((a, b) => ord === 'n' ? a.n.localeCompare(b.n) : val(b) - val(a) || a.n.localeCompare(b.n));
+  const th = (k, t, cls = '') => `<th class="${cls}"${ord === k ? ' aria-sort="descending"' : ''}><button type="button" data-orden="${k}">${t}</button></th>`;
+  $('#tablaNac').innerHTML = `<table class="tabla tabla-nac"><thead><tr>${th('n', 'Departamento')}${th('aviso', 'Aviso SENAMHI')}${th('conAviso', 'Distritos con aviso', 'num')}${th('quebrada', 'Quebradas', 'num')}${th('emerg', 'Emergencias', 'num')}</tr></thead><tbody>${filas.map(d => `
+    <tr class="clic" data-dep-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${num(d.total)} distritos</small></td><td>${chipNivel(d.aviso)}</td><td class="num">${d.conAviso ? num(d.conAviso) : '–'}</td><td class="num">${qv ? (d.quebrada ? num(d.quebrada) : '–') : '<span title="sin aviso de quebradas vigente">·</span>'}</td><td class="num">${d.emerg ? num(d.emerg) + (d.victimas ? ` <span class="victima">${d.victimas} víct.</span>` : '') : '–'}</td></tr>`).join('')}</tbody></table>`;
+  $('#notaNac').innerHTML = `Cruce de VIGÍA, no oficial, entre los límites del INEI y los avisos oficiales: un distrito cuenta como «con aviso» si su centro cae dentro de la zona del aviso de lluvia del SENAMHI para ese día; las quebradas se asignan por nombre de distrito y las emergencias por su UBIGEO. «Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. Toca una tarjeta para ver esos distritos en el mapa y un departamento para ir a él.`;
+  pintarFiltroNacional(encuadrar);
+}
+
 function pintarOps() {
+  pintarNacional();
   const z = DATA.zona;
   if (!z) { $('#kpisPrio').innerHTML = '<p class="vacio">Faltan los datos de la zona norte: ejecuta «Actualizar datos».</p>'; return; }
   if (!UI.ops.dia || !diasOps().includes(UI.ops.dia)) UI.ops.dia = diasOps()[0];
   const dia = UI.ops.dia, lista = ZD().filter(d => UI.ops.dep === 'todos' || d.dep === UI.ops.dep);
   $('#metaOps').textContent = `${z.departamentos.map(titulo).join(' · ')} · ${ZD().length} distritos · SENAMHI ${haceCuanto(FRESCO.zona.t)} · INDECI ${haceCuanto(FRESCO.emergencias.t)}`;
-  $('#diasOps').innerHTML = diasOps().map(f => { const n = lista.filter(d => prioridad(d, f).nivel === 3).length; return `<button type="button" data-dia="${f}" aria-pressed="${f === dia}">${nombreDia(f)}<small>${n} prioridad alta</small></button>`; }).join('');
+  // los días van arriba, en la situación nacional: cuentan departamentos con aviso (o, sin el índice del INEI, prioridad del norte)
+  $('#diasOps').innerHTML = diasOps().map(f => { const R = resumenNacional(f), n = R ? R.deps.filter(d => d.conAviso).length : lista.filter(d => prioridad(d, f).nivel === 3).length; return `<button type="button" data-dia="${f}" aria-pressed="${f === dia}">${nombreDia(f)}<small>${R ? `${n} dep. con aviso` : `${n} prioridad alta`}</small></button>`; }).join('');
   $('#depsOps').innerHTML = ['todos', ...z.departamentos].map(k => `<button type="button" data-dep="${k}" aria-pressed="${UI.ops.dep === k}">${k === 'todos' ? 'Toda la zona' : titulo(k)}<small>${k === 'todos' ? ZD().length : ZD().filter(d => d.dep === k).length} distritos</small></button>`).join('');
   $('#kpisPrio').innerHTML = [3, 2, 1].map(k => `<div class="kpi nivel" style="--c:var(--${NIVEL_PRIO[k].c})"><small>Prioridad ${NIVEL_PRIO[k].n}</small><b>${lista.filter(d => prioridad(d, dia).nivel === k).length}</b><span>distritos · ${nombreDia(dia).toLowerCase()}</span></div>`).join('');
   $('#kpisOps').innerHTML = [4, 3, 2].map(k => `<div class="kpi nivel" style="--c:${colorNivel(k)}"><small>Nivel ${NIVEL_AVISO[k].n}</small><b>${lista.filter(d => nivelDistrito(d, dia).total === k).length}</b><span>distritos · ${nombreDia(dia).toLowerCase()}</span></div>`).join('');
@@ -1650,6 +1759,10 @@ function verDistrito(d, { volar = true } = {}) {
 }
 document.getElementById('p-ops').addEventListener('click', e => {
   const t = e.target;
+  const fl = t.closest('[data-filtro]'); if (fl) { UI.nac.filtro = UI.nac.filtro === fl.dataset.filtro ? null : fl.dataset.filtro; return pintarNacional({ encuadrar: true }); }
+  if (t.closest('[data-quitar-filtro]')) { UI.nac.filtro = null; return pintarNacional(); }
+  const or = t.closest('[data-orden]'); if (or) { UI.nac.orden = or.dataset.orden; return pintarNacional(); }
+  const dn = t.closest('[data-dep-nac]'); if (dn) { const en = indiceConsulta().find(x => x.tipo === 'departamento' && x.obj.id === dn.dataset.depNac); if (en) { $('#txtConsulta').value = titulo(en.obj.n); consultar(en.obj.n, en); } return; }
   const dia = t.closest('[data-dia]'); if (dia) { UI.ops.dia = dia.dataset.dia; UI.lluvia.dia = diasAvisos().includes(UI.ops.dia) ? UI.ops.dia : UI.lluvia.dia; pintarOps(); pintarCapas(); G?.distritos(); G?.avisos(UI.lluvia.dia); return; }
   const mp = t.closest('[data-mapa]'); if (mp) { UI.ops.mapa = mp.dataset.mapa; UI.capas.distritos = true; pintarCapas(); G?.capas(); G?.distritos(); pintarOps(); return; }
   const ir = t.closest('[data-ir]'); if (ir) return abrirVista(ir.dataset.ir);
@@ -1879,7 +1992,7 @@ let INDICE = null, TERR = null, CCPP = null;
 // límites del INEI para todo el Perú (datos/territorio.json); se carga después de la página
 let promesaTerr = null;
 function cargarTerritorio() {
-  return promesaTerr ??= fetch('datos/territorio.json').then(r => r.ok ? r.json() : null).then(t => { TERR = t; INDICE = null; return t; }).catch(() => null);
+  return promesaTerr ??= fetch('datos/territorio.json').then(r => r.ok ? r.json() : null).then(t => { TERR = t; INDICE = null; CACHE_NAC.clear(); pintarOps(); return t; }).catch(() => null);
 }
 function entradasNacionales(T) {
   const nomProv = new Map(T.provincias.map(t => [t[0], t[1]])), nomDep = new Map(T.departamentos.map(t => [t[0], t[1]]));
@@ -2953,6 +3066,8 @@ async function iniciarMapa() {
   fuente('zona'); map.addLayer({ id: 'zona-f', type: 'fill', source: 'zona', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, ['get', 'a'], 12, ['*', 0.5, ['get', 'a']]] } });
   fuente('avisos'); map.addLayer({ id: 'avisos-f', type: 'fill', source: 'avisos', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': ['get', 'a'] } });
   map.addLayer({ id: 'avisos-l', type: 'line', source: 'avisos', paint: { 'line-color': ['get', 'c'], 'line-width': 1.6 } });
+  fuente('nacional'); map.addLayer({ id: 'nacional-f', type: 'fill', source: 'nacional', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': ['get', 'a'] } });
+  map.addLayer({ id: 'nacional-l', type: 'line', source: 'nacional', paint: { 'line-color': ['get', 'c'], 'line-width': 1, 'line-opacity': 0.85 } });
   fuente('pais'); map.addLayer({ id: 'pais-dist', type: 'line', source: 'pais', minzoom: 7, filter: ['==', ['get', 'n'], 3], paint: { 'line-color': '#FFFFFF', 'line-opacity': 0.22, 'line-width': 0.7 } });
   map.addLayer({ id: 'pais-prov', type: 'line', source: 'pais', minzoom: 5.5, filter: ['==', ['get', 'n'], 2], paint: { 'line-color': '#FFFFFF', 'line-opacity': 0.32, 'line-width': 1 } });
   map.addLayer({ id: 'pais-dep', type: 'line', source: 'pais', filter: ['==', ['get', 'n'], 1], paint: { 'line-color': '#FFD38A', 'line-opacity': ['interpolate', ['linear'], ['zoom'], 3, 0.25, 6, 0.55], 'line-width': 1.2 } });
@@ -3334,6 +3449,7 @@ async function iniciarMapa() {
     capas: aplicarCapas, reconstruir, volarA, encuadrar, irA, vistaNacional, estadoCamara, cajaEnPantalla, encuadre, marcarSeleccion, marcarLugar,
     lluvia: id => mostrarLluvia(id), avisos: dia => dibujarAvisos(dia),
     distritos: dibujarDistritos, marcarDistrito, marcarCuenca, termicaOpacidad: o => map.setPaintProperty('termica', 'raster-opacity', o),
+    nacional: fs => { datos('nacional', fc(fs.map(f => poli(f.poligonos, { c: f.c, a: f.a })))); return true; },
     opacidad, base: ponerBase, baseActual: () => baseActual,
   };
 }
@@ -4202,6 +4318,7 @@ async function iniciarGlobo() {
     capas: aplicarCapas, reconstruir, volarA, encuadrar, irA, vistaNacional, estadoCamara, cajaEnPantalla, encuadre, marcarSeleccion, marcarLugar,
     lluvia: id => mostrarLluvia(id), avisos: dia => dibujarAvisos(dia),
     distritos: dibujarDistritos, marcarDistrito, marcarCuenca, termicaOpacidad: o => { matTermica.opacity = o; },
+    nacional: () => false, // el globo de respaldo no dibuja el filtro nacional
   };
   for (const k in api) { const f = api[k]; api[k] = (...a) => { marcar(); return f(...a); }; } // todo cambio pide un cuadro nuevo
   return api;
