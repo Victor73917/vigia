@@ -79,16 +79,28 @@ ENFEN_RESUMEN = {
 
 # segundos de espera por descarga; en GitHub Actions se baja (VIGIA_ESPERA) para que una fuente lenta no frene a las demás
 ESPERA = float(os.environ.get("VIGIA_ESPERA", "120"))
+# El SENAMHI y el ENFEN no responden a los servidores de GitHub. Con VIGIA_PROXY (dirección del Worker de Cloudflare,
+# ver nube/puente-peru.js) y VIGIA_PROXY_CLAVE, esas descargas pasan por el Worker; las demás van directo.
+PROXY = os.environ.get("VIGIA_PROXY", "").rstrip("/")
+PROXY_CLAVE = os.environ.get("VIGIA_PROXY_CLAVE", "")
+POR_PROXY = ("idesep.senamhi.gob.pe", "www.senamhi.gob.pe", "enfen.imarpe.gob.pe")
+
+
+def por_proxy(url):
+    if PROXY and urllib.parse.urlsplit(url).hostname in POR_PROXY:
+        return PROXY + "/?u=" + urllib.parse.quote(url, safe=""), {"X-Vigia-Clave": PROXY_CLAVE}
+    return url, {}
 
 
 def bajar(url, texto=False, intentos=2, binario=False, rango=None):
     ultimo = None
     for _ in range(intentos):
         try:
-            cab = {"User-Agent": AGENTE, "Accept-Encoding": "gzip"}
+            destino, extra = por_proxy(url)
+            cab = {"User-Agent": AGENTE, "Accept-Encoding": "gzip", **extra}
             if rango:
                 cab["Range"] = f"bytes={rango[0]}-{rango[1]}"
-            req = urllib.request.Request(url, headers=cab)
+            req = urllib.request.Request(destino, headers=cab)
             with urllib.request.urlopen(req, timeout=ESPERA) as r:
                 crudo = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
