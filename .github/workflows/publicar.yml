@@ -1,8 +1,9 @@
 # Recolecta los datos de VIGÍA y publica la página en GitHub Pages, sin que nadie tenga que subir nada.
 # Cada hora: emergencias del INDECI, METAR, imagen térmica, IMERG y GDACS.
 # El SENAMHI y el ENFEN no responden a los servidores de GitHub: se piden a través del Worker de Cloudflare
-# nube/puente-peru.js (VIGIA_PROXY, con la clave del secreto VIGIA_PROXY_CLAVE). Si ese secreto no existe, se usan
-# los datos que sube la PC del usuario (subir-peru.bat) a la rama datos-peru.
+# nube/puente-peru.js (VIGIA_PROXY), que solo atiende las direcciones que usa VIGÍA. Si algún día se le pone el
+# secreto CLAVE, el mismo valor va en el secreto VIGIA_PROXY_CLAVE de GitHub. Si la rama datos-peru trae datos
+# más nuevos (la antigua tarea de la PC), se usan esos.
 # Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
 # Producción (/vigia/) se arma siempre desde main. La rama desarrollo se arma en /vigia/pruebas/, con los mismos datos
@@ -74,7 +75,6 @@ jobs:
           VIGIA_ESPERA: "45"
           VIGIA_PROXY: https://vigia-puente.claudecode13213.workers.dev
           VIGIA_PROXY_CLAVE: ${{ secrets.VIGIA_PROXY_CLAVE }}
-          VIGIA_SALTAR: ${{ secrets.VIGIA_PROXY_CLAVE == '' && 'avisos quebradas enfen' || '' }}
           PYTHONUNBUFFERED: "1"
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
