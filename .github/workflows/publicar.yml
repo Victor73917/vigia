@@ -1,7 +1,8 @@
 # Recolecta los datos de VIGÍA y publica la página en GitHub Pages, sin que nadie tenga que subir nada.
 # Cada hora: emergencias del INDECI, METAR, imagen térmica, IMERG y GDACS.
-# Los avisos y quebradas del SENAMHI y el ENFEN no responden fuera del Perú: los baja la PC del usuario
-# (subir-peru.bat, a los :05 de cada hora) y los sube a la rama datos-peru; la corrida de los :17 los lee de ahí.
+# El SENAMHI y el ENFEN no responden a los servidores de GitHub: se piden a través del Worker de Cloudflare
+# nube/puente-peru.js (VIGIA_PROXY, con la clave del secreto VIGIA_PROXY_CLAVE). Si ese secreto no existe, se usan
+# los datos que sube la PC del usuario (subir-peru.bat) a la rama datos-peru.
 # Cada 6 horas: todas las fuentes (pronósticos, caudales de GloFAS, distritos, océano).
 # También se puede correr a mano desde la pestaña Actions («Run workflow»), eligiendo las fuentes.
 # Producción (/vigia/) se arma siempre desde main. La rama desarrollo se arma en /vigia/pruebas/, con los mismos datos
@@ -71,14 +72,16 @@ jobs:
       - name: Recolectar
         env:
           VIGIA_ESPERA: "45"
-          VIGIA_SALTAR: "avisos quebradas enfen"
+          VIGIA_PROXY: https://vigia-puente.claudecode13213.workers.dev
+          VIGIA_PROXY_CLAVE: ${{ secrets.VIGIA_PROXY_CLAVE }}
+          VIGIA_SALTAR: ${{ secrets.VIGIA_PROXY_CLAVE == '' && 'avisos quebradas enfen' || '' }}
           PYTHONUNBUFFERED: "1"
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "Cambio en el código o datos nuevos de la PC: se publica sin bajar fuentes"
             python -X utf8 recolectar.py nada
           elif [ "${{ github.event.schedule }}" = "17 * * * *" ]; then
-            python -X utf8 recolectar.py emergencias aerodromos termica imerg mundo || echo "El recolector terminó con errores; se publica lo que se pudo"
+            python -X utf8 recolectar.py emergencias aerodromos termica imerg mundo avisos quebradas enfen || echo "El recolector terminó con errores; se publica lo que se pudo"
           else
             python -X utf8 recolectar.py ${{ github.event.inputs.fuentes }} || echo "El recolector terminó con errores; se publica lo que se pudo"
           fi

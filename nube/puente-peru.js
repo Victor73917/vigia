@@ -3,7 +3,7 @@
 // les pide esas páginas a este Worker, que las trae desde la red de Cloudflare y las devuelve tal cual.
 // No guarda nada. Solo atiende a quien envía la clave (secreto CLAVE del Worker = secreto VIGIA_PROXY_CLAVE de GitHub)
 // y solo hacia los sitios de PERMITIDOS, para no convertirse en un proxy abierto.
-// Prueba sin clave: GET /estado responde si el Worker llega al SENAMHI y al ENFEN.
+// Prueba sin clave: GET /estado responde si el Worker llega al SENAMHI y al ENFEN (/estado?estricto: 503 si alguno falla).
 
 const PERMITIDOS = new Set(['idesep.senamhi.gob.pe', 'www.senamhi.gob.pe', 'senamhi.gob.pe', 'enfen.imarpe.gob.pe']);
 const AGENTE = 'Mozilla/5.0 (compatible; VIGIA/1.0; monitor de riesgos sin fines de lucro; +https://victor73917.github.io/vigia)';
@@ -44,7 +44,9 @@ export default {
         try { const r = await traer(u, { signal: AbortSignal.timeout(25000) }); out[n] = { estado: r.status, ms: Date.now() - t0 }; await r.body?.cancel(); }
         catch (e) { out[n] = { error: String(e.message || e), ms: Date.now() - t0 }; }
       }));
-      return Response.json({ colo: req.cf?.colo, resultados: out });
+      // ?estricto responde 503 si alguna fuente falla, para probarlo desde servicios que solo ven el código HTTP
+      const falla = Object.values(out).some(x => x.error || x.estado >= 400);
+      return Response.json({ colo: req.cf?.colo, resultados: out }, { status: falla && url.searchParams.has('estricto') ? 503 : 200 });
     }
     if (!env.CLAVE || !iguales(req.headers.get('x-vigia-clave') || '', env.CLAVE)) return new Response('no autorizado', { status: 401 });
     if (req.method !== 'GET') return new Response('solo GET', { status: 405 });
