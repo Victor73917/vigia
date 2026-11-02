@@ -305,3 +305,25 @@ Por eso se cambió al método del río con nombre.
 - Huarmaca (Piura) encabeza la lista: quebradas en rojo y 3 emergencias.
 - La comparación de la provincia de Huancayo, el departamento de Loreto y el distrito de Piura muestra datos coherentes.
 - En el celular, la tabla se desplaza dentro de su recuadro sin desbordar la página.
+
+---
+
+## 12. Fase 5: rayos del GOES-19 y comunicado del ENFEN automático (2 de noviembre de 2026)
+
+| Pieza | Qué hace | Fuente |
+|---|---|---|
+| Rayos (resuelve A-17 en parte) | Cada hora, los destellos de buena calidad sobre el Perú en los 60 minutos previos, agrupados en celdas de unos 5 km con su cantidad y el más reciente. Capa en el mapa (amarillo: menos de 10 min; celeste: 10 a 30; gris: 30 a 60), tarjeta nacional que filtra los distritos con rayos, el dato en la ficha de cada distrito, la lista de fuentes y el contexto del analista | NOAA GOES-19, sensor GLM, archivos de 20 s en el bucket abierto `noaa-goes19` de AWS |
+| Comunicado del ENFEN (resuelve A-10) | Cuando el ENFEN publica un comunicado nuevo, el recolector baja el PDF y lee el número, la fecha, el estado del sistema de alerta, el titular y la fecha del próximo. El resumen en puntos, escrito a mano, se retira porque es del comunicado anterior, y se enlaza el PDF. También dejan de mostrarse los ríos que nombraba ese resumen | ENFEN (vía el Worker de Cloudflare) |
+
+**Lo que no se hizo y por qué:**
+- **Radar meteorológico:** sigue sin existir una fuente pública abierta para el Perú. La página no lo simula.
+- **Rayos en la prioridad:** no suman. Son una observación del momento, no un aviso. Además, el GLM no detecta todos los rayos: los detecta desde el espacio, y su eficiencia es menor de día y con nubes muy densas.
+- **Rayos en el globo de respaldo:** no se dibujan; en ese modo la capa no se ofrece.
+- **Vulnerabilidad del CENEPRED, vías del MTC y SONICS (A-16):** su licencia de uso y su acceso automático siguen sin verificarse, así que no se incorporaron.
+
+**Pruebas locales:**
+- Lector del ENFEN probado con los comunicados 16, 17, 18 y 19 de 2026, que vienen en tres formatos distintos («Estado del sistema de alerta: …», sin titular, «del 2026»). Los cuatro salen con el número, la fecha, el estado y el próximo correctos.
+- Rayos: una hora completa son 179 archivos, se leen en 21 s y ocupan unos 5 KB. En la prueba hubo 834 destellos, todos asignados a un distrito del INEI, en 39 distritos de 9 departamentos. Soplín (Requena, Loreto) tuvo 394.
+- Se simuló un comunicado nuevo del ENFEN y la pestaña de El Niño mostró el estado, el titular y la nota con el enlace al PDF.
+
+**Para el sitio de pruebas:** sus datos salen del recolector de `main`. Hasta que esta fase pase a producción, /pruebas/ muestra la tarjeta de rayos como «Sin datos suficientes», lo que comprueba también ese caso.

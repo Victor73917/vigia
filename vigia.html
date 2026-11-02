@@ -1022,7 +1022,7 @@ const CAPA_INFO = {
   termica: { f: 'NOAA GOES-East, banda 13, vía NASA GIBS', tipo: 'Observación satelital', k: 'termica' },
   avisos: { f: 'SENAMHI, avisos meteorológicos', tipo: 'Aviso oficial', k: 'avisos', ley: [['rojo', 'rojo'], ['naranja', 'naranja'], ['amarillo', 'amarillo']] },
   lluvia: { f: () => UI.lluvia.producto === 'imerg' ? 'NASA GPM IMERG' : 'ECMWF IFS 0,25°', tipo: () => UI.lluvia.producto === 'imerg' ? 'Estimación satelital' : 'Pronóstico de modelo', k: () => UI.lluvia.producto === 'imerg' ? 'imerg' : 'ecmwf' },
-  rayos: { f: 'NOAA GOES-19, sensor de rayos GLM', tipo: 'Observación satelital', k: 'rayos', ley: [['tinta', 'hace menos de 10 min'], ['tormenta', '10 a 30 min'], ['tinta-3', '30 a 60 min']] },
+  rayos: { f: 'NOAA GOES-19, sensor de rayos GLM', tipo: 'Observación satelital', k: 'rayos', ley: [['amarillo', 'hace menos de 10 min'], ['tormenta', '10 a 30 min'], ['tinta-3', '30 a 60 min']] },
   nino: { f: 'NOAA OISST', tipo: 'Observación', k: 'nino' },
   mundo: { f: 'GDACS (ONU y Comisión Europea)', tipo: 'Alerta internacional', k: 'mundo' },
   ciudades: { f: 'Open-Meteo (ECMWF)', tipo: 'Pronóstico de modelo', k: 'clima' },
@@ -3489,10 +3489,10 @@ async function iniciarMapa() {
   fuente('rios'); map.addLayer({ id: 'rios', type: 'line', source: 'rios', layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': ['match', ['get', 'n'], 2, '#FF3B3B', 1, '#FF9F1C', '#5BC0FF'], 'line-width': ['match', ['get', 'n'], 2, 3.6, 1, 2.8, 2.2] } });
   fuente('sel'); map.addLayer({ id: 'sel', type: 'line', source: 'sel', paint: { 'line-color': COL.sodio, 'line-width': 3 } });
-  // rayos del GLM: una celda de 5 km por grupo de destellos; más grande si hubo más, más clara si fue reciente
+  // rayos del GLM: una celda de 5 km por grupo de destellos; más grande si hubo más, amarilla si fue reciente
   fuente('rayos', fc((DATA.rayos?.celdas || []).map(([lng, lat, n, e]) => punto(lng, lat, { n, e }))));
   map.addLayer({ id: 'rayos', type: 'circle', source: 'rayos', layout: { 'circle-sort-key': ['-', 60, ['get', 'e']] },
-    paint: { 'circle-color': ['step', ['get', 'e'], '#FFFFFF', 10, COL.tormenta, 30, COL['tinta-3']], 'circle-opacity': 0.9,
+    paint: { 'circle-color': ['step', ['get', 'e'], COL.amarillo, 10, COL.tormenta, 30, COL['tinta-3']], 'circle-opacity': 0.9,
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, ['+', 1.5, ['*', 0.6, ['sqrt', ['get', 'n']]]], 9, ['+', 3, ['*', 1.4, ['sqrt', ['get', 'n']]]]],
       'circle-stroke-color': '#03060D', 'circle-stroke-width': 0.6 } });
   // puntos: cada capa es un GeoJSON con t (tipo), i (índice), g (glifo), c (color), s (tamaño en px)
