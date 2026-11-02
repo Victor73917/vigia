@@ -216,7 +216,7 @@
       <table class="tabla"><thead><tr><th>Recurso</th><th>Base</th><th>Estado</th></tr></thead><tbody>${D.rec.map(r => `
         <tr><td><b>${e(r.nombre)}</b><small>${TIPOS_REC[r.tipo]} · ${e(nomDep(r.departamento))}</small></td><td>${e(r.base || '–')}</td><td>${ESTADOS_REC[r.estado]}${puedeEditar() && r.estado !== 'asignado' ? `<br><button class="btn" type="button" data-cmd-mant="${r.id}">${r.estado === 'mantenimiento' ? 'Marcar disponible' : 'A mantenimiento'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="3" class="vacio">Sin recursos a la vista.</td></tr>'}</tbody></table>
       ${yo.rol === 'supervisor' ? usuarios() : ''}
-      ${D.bit.length ? `<h3>Bitácora</h3><div class="cmd-bit">${D.bit.map(b => `<div><b>${X.fmt(Date.parse(b.momento), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</b> · ${e(b.correo || 'carga de datos ficticios')} · ${e(b.accion)} en ${e(b.tabla)} #${e(b.fila)}${resumenCambio(b)}</div>`).join('')}</div><p class="meta">La bitácora la escribe la base de datos; nadie puede editarla ni borrarla.</p>` : ''}`;
+      ${D.bit.length ? `<h3>Bitácora</h3><div class="cmd-bit">${D.bit.map(b => `<div><b>${X.fmt(Date.parse(b.momento), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</b> · ${e(b.correo || (b.tabla === 'reportes' && b.accion === 'insert' ? 'ciudadano sin cuenta' : 'carga de datos ficticios'))} · ${e(b.accion)} en ${e(b.tabla)} #${e(b.fila)}${resumenCambio(b)}</div>`).join('')}</div><p class="meta">La bitácora la escribe la base de datos; nadie puede editarla ni borrarla.</p>` : ''}`;
     enlazar();
   }
 
@@ -320,7 +320,7 @@
       caja.querySelector('[data-rep-ir]')?.addEventListener('click', () => irA(r));
       caja.querySelectorAll('[data-rep-estado]').forEach(b => { b.onclick = () => hacer(sb.from('reportes').update({ estado: b.dataset.repEstado, revisado: new Date().toISOString(), revisado_por: yo.id }).eq('id', r.id), b.dataset.repEstado === 'verificado' ? 'Reporte verificado: ya aparece en el mapa público' : 'Reporte descartado'); });
       const conv = caja.querySelector('[data-rep-convertir]');
-      if (conv) conv.onclick = () => hacer(sb.rpc('convertir_reporte', { p_reporte: r.id, p_nivel: Number(caja.querySelector('[data-rep-nivel]').value), p_titulo: conMarca(`${TIPOS[r.tipo]} reportado en ${X.titulo(X.TERR?.distritos.find(d => d[0] === r.ubigeo)?.[1] || r.ubigeo)}`) }), 'Reporte convertido en incidencia');
+      if (conv) conv.onclick = () => hacer(sb.rpc('convertir_reporte', { p_reporte: r.id, p_nivel: Number(caja.querySelector('[data-rep-nivel]').value), p_titulo: conMarca(`Reporte ciudadano: ${TIPOS[r.tipo].toLowerCase()} en ${X.titulo(X.TERR?.distritos.find(d => d[0] === r.ubigeo)?.[1] || r.ubigeo)}`) }), 'Reporte convertido en incidencia');
     });
     c.querySelectorAll('[data-cmd-per]').forEach(tr => {
       const id = tr.dataset.cmdPer, rol = tr.querySelector('[data-cmd-rol]'), deps = tr.querySelector('[data-cmd-deps]');

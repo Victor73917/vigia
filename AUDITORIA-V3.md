@@ -364,3 +364,42 @@ Por eso se cambió al método del río con nombre.
 **Pendiente:**
 - Probar el cambio de rol y un usuario operador con departamentos limitados.
 - Para poner el sistema en servicio hacen falta el titular de los datos (Ley 29733), la autorización de la institución, un proyecto en São Paulo y el plan Pro (copias de seguridad).
+
+---
+
+## 14. Fase 7: portal ciudadano de pruebas (2 de noviembre de 2026)
+
+**Dónde está:** solo en /pruebas/, pestaña «Reportar», sin cuenta. Todo reporte es ficticio: la base exige `ficticio = true` y el formulario lo dice y lo hace confirmar.
+
+| Pieza | Qué hace |
+|---|---|
+| Números de emergencia | Arriba del formulario, con enlace para llamar: 105 Policía Nacional, 116 Bomberos, 106 SAMU y 115 Defensa Civil. Verificados en gob.pe (página de contacto de la PNP y la del SAMU). El portal dice que no reemplaza a esos números ni al COEN |
+| Envío sin cuenta | Tipo, descripción (10 a 1 000 caracteres) y ubicación, con un toque en el mapa o la del teléfono. Pasa por la función `enviar_reporte`: la tabla no se puede leer ni escribir sin sesión |
+| Datos personales | No se piden ni se guardan nombre, DNI, teléfono, correo ni IP. El formulario pide no escribirlos en la descripción |
+| Límite de envíos | 30 reportes por 10 minutos en todo el país y 5 por distrito. Es un límite general, no por persona, porque no se guarda la IP |
+| Seguimiento | Código de 10 caracteres. `estado_reporte` devuelve solo el estado, el tipo, las fechas y la nota del operador |
+| Mapa público | Solo reportes verificados de los últimos 7 días, sin descripción y con la ubicación redondeada a unos 1 km (`reportes_publicos`). Se ven como círculos huecos azules |
+| Centro de comando | Bandeja de reportes por departamento. El operador puede verificar, descartar o convertir en incidencia (`convertir_reporte`). Todo queda en la bitácora |
+
+**Pruebas hechas:**
+- **Sin cuenta, desde /pruebas/:**
+  - Enviar un reporte devolvió su código, y la consulta por código dio «recibido».
+  - La base rechazó una descripción corta, un punto fuera del Perú, leer la tabla y convertir sin sesión.
+  - La función pública devolvió solo el reporte verificado, con la ubicación redondeada.
+- **Con la sesión del supervisor:**
+  - La bandeja mostró los 4 reportes.
+  - Al convertir el de Sullana se creó la incidencia y el reporte salió de la bandeja.
+  - La bitácora registró los dos pasos.
+  - Las capas de incidencias y de reportes verificados aparecen en el mapa.
+
+**No incluido, a propósito:**
+- **Fotos:** pueden mostrar a personas o casas. Hace falta definir su tratamiento y su retención, y además consumen almacenamiento.
+- **Datos de contacto y DNI:** necesitan un titular del banco de datos (Ley 29733).
+- **Notificaciones por SMS o correo:** son un servicio de pago.
+
+**Para recibir reportes reales hace falta:**
+- el titular de los datos;
+- una política de privacidad;
+- la inscripción del banco de datos;
+- un proyecto en São Paulo con plan Pro;
+- quitar a conciencia la restricción de datos ficticios.
