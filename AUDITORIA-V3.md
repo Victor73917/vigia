@@ -427,3 +427,23 @@ Está todo listo para encenderlo:
 3. Crear la variable de GitHub `ANALISTA` con el valor `1`.
 
 **Lo detectó la prueba automática:** la primera versión web llamaba a `sample.limits()`, que solo existe dentro de Claude. La navegación falló y no se publicó nada en producción; se corrigió.
+
+---
+
+## 16. Fase 9: validación y seguridad (2 de noviembre de 2026)
+
+| Punto | Resultado |
+|---|---|
+| **A-14 · Política de seguridad de contenido (CSP)** | Va como `<meta>`, porque GitHub Pages no permite cabeceras, y la arma `construir.py`. Permite solo scripts propios, los de jsDelivr (MapLibre, three.js, Supabase) y los tres scripts en línea, identificados por su hash calculado al armar la página: no hay `unsafe-inline` para scripts ni `eval`. Los datos solo pueden venir de Open-Meteo, NASA GIBS, GDACS, Esri, CARTO y, en /pruebas/, Supabase. No admite objetos ni marcos, el referrer va acotado y las peticiones inseguras se suben a HTTPS |
+| Prueba de la CSP | Local y en /pruebas/, sin ningún bloqueo: mapa base satelital, oscuro y topográfico, capas de lluvia, térmica, rayos, avisos y El Niño, pestañas, ficha de un lugar, globo de respaldo, centro de comando con sesión, portal ciudadano y tiempo real |
+| Prueba automática | Ahora falla si la CSP bloquea algo: así una fuente nueva que falte en la lista se detecta antes de publicar. Se cambió `wait_for_function`, que usa `eval` (la CSP lo bloquea), por una espera con `evaluate` |
+| **A-15 · innerHTML** | Se revisaron las 178 interpolaciones con campos de datos. Los textos externos (SENAMHI, INDECI, ENFEN, ANA, INEI, GDACS) pasan por `esc()` o van como `textContent`. Los números de aviso son enteros: el recolector los convierte con `int()`. Las etiquetas del mapa usan `textContent`. `comando.js` escapa todo con `e()`. No se encontró ninguna inyección posible |
+| Celular | En /pruebas/ (375 px de ancho) no hay desborde horizontal y los números de emergencia quedan arriba. Se corrigió que los botones del mapa («Perú», ubicación y «?») tapaban las pestañas con la hoja a media altura: ahora suben sobre ella y se ocultan con la hoja llena |
+| Producción | Sigue sin centro de comando, sin portal y sin analista: esas pestañas solo existen con Supabase configurado, y eso solo ocurre en /pruebas/ |
+
+**Pendiente, fuera del código:**
+- Para pasar el centro de comando y el portal a producción con datos reales hacen falta:
+  - el titular del banco de datos (Ley 29733), su inscripción y una política de privacidad;
+  - la autorización de la institución;
+  - un proyecto Supabase en São Paulo con plan Pro (copias de seguridad).
+- Falta probarlo en un celular físico.
