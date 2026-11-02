@@ -124,6 +124,9 @@ jobs:
         env:
           VIGIA_SITIO: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pruebas
           VIGIA_PRUEBAS: "1"
+          # centro de comando (fase 6): dirección y clave pública del proyecto Supabase de pruebas (variables, no secretos)
+          VIGIA_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VIGIA_SUPABASE_ANON: ${{ vars.SUPABASE_ANON }}
         run: |
           if git fetch --depth=1 origin desarrollo; then
             git worktree add --detach ../dev FETCH_HEAD
