@@ -327,3 +327,34 @@ Por eso se cambió al método del río con nombre.
 - Se simuló un comunicado nuevo del ENFEN y la pestaña de El Niño mostró el estado, el titular y la nota con el enlace al PDF.
 
 **Para el sitio de pruebas:** sus datos salen del recolector de `main`. Hasta que esta fase pase a producción, /pruebas/ muestra la tarjeta de rayos como «Sin datos suficientes», lo que comprueba también ese caso.
+
+---
+
+## 13. Fase 6: centro de comando de pruebas (2 de noviembre de 2026)
+
+**Dónde está:** solo en /pruebas/, pestaña «Comando». La página pública no lo incluye: ni la pestaña ni `comando.js`.
+
+| Pieza | Qué hay |
+|---|---|
+| Proyecto | Supabase `vigia-pruebas`, plan Free (0 USD), organización VIGIA. Quedó en **East US (Ohio)**, no en São Paulo; la región no se puede cambiar. Para datos reales, crear otro proyecto en São Paulo |
+| Tablas | perfiles (rol y departamentos), incidencias, recursos, misiones, mision_recursos y bitácora (`nube/supabase/001_esquema.sql`) |
+| Solo datos ficticios | Cada tabla operativa tiene la restricción `ficticio = true`, y los títulos llevan «[FICTICIO]» |
+| Acceso | Sin sesión no se puede leer ni escribir nada. Con sesión hace falta la verificación en dos pasos (TOTP, nivel aal2). Lector ve sus departamentos; operador además crea y cambia incidencias y misiones; supervisor ve todo el país, crea recursos y asigna roles. El registro abierto está desactivado |
+| Bitácora | La escriben disparadores de la base; no hay regla que permita editarla ni borrarla |
+| Configuración | Variables de GitHub `SUPABASE_URL` y `SUPABASE_ANON` (públicas por diseño) y secreto `SUPABASE_DB_URL` (cadena del Session pooler, solo para el flujo `supabase.yml`) |
+| Flujo `supabase.yml` | Manual: «esquema», «ficticios» o «supervisor» (con el correo). Cada lunes hace una consulta para que el proyecto gratuito no se pause |
+
+**Pruebas hechas:**
+- **Sin sesión, desde /pruebas/ con la clave pública:**
+  - Leer las cinco tablas da «permission denied».
+  - Crear incidencias y misiones también da «permission denied».
+  - Registrar una cuenta nueva da «Signups not allowed».
+- **Con la sesión del supervisor**, después de la verificación en dos pasos con Google Authenticator:
+  - Se ven 10 incidencias activas y 1 cerrada, también en el mapa.
+  - Los indicadores coinciden con los datos cargados: 8 abiertas, 2 en atención, 7 de 11 recursos disponibles y 2 misiones en curso de 3.
+  - Se ven las secciones de recursos, usuarios y bitácora.
+
+**Pendiente:**
+- Probar con la sesión del supervisor la escritura: crear una incidencia y una misión, cerrarla y cambiar un rol.
+- Probar un usuario operador con departamentos limitados.
+- Para poner el sistema en servicio hacen falta el titular de los datos (Ley 29733), la autorización de la institución, un proyecto en São Paulo y el plan Pro (copias de seguridad).
