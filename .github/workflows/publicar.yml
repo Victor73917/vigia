@@ -127,6 +127,8 @@ jobs:
           # centro de comando (fase 6): dirección y clave pública del proyecto Supabase de pruebas (variables, no secretos)
           VIGIA_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           VIGIA_SUPABASE_ANON: ${{ vars.SUPABASE_ANON }}
+          # analista IA (fase 8): apagado; se enciende con la variable ANALISTA = 1 cuando haya clave de Anthropic con crédito
+          VIGIA_ANALISTA: ${{ vars.ANALISTA }}
         run: |
           if git fetch --depth=1 origin desarrollo; then
             git worktree add --detach ../dev FETCH_HEAD

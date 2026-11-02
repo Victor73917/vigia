@@ -4906,7 +4906,8 @@ function md(texto) {
 async function iniciarAnalista() {
   const cuerpo = $('#analistaCuerpo');
   const sinClaude = msg => { cuerpo.innerHTML = `<p class="vacio">${msg}</p>`; };
-  const enNube = !EN_CLAUDE && !!window.VIGIA_NUBE;
+  // la función «analista» de Supabase necesita una clave de Anthropic con crédito: solo se usa si construir.py la activa
+  const enNube = !EN_CLAUDE && !!window.VIGIA_NUBE?.analista;
   if (!EN_CLAUDE && !enNube) { if (UI.vista === 'analista') abrirVista('ops', { desplegar: false }); $('#t-analista').hidden = true; VISTAS.splice(VISTAS.indexOf('analista'), 1); return; }
   cuerpo.innerHTML = '<p class="vacio">Conectando con Claude…</p>';
   let sample = null;
@@ -5050,7 +5051,7 @@ function arrancar() {
   relojes(); setInterval(relojes, 1000);
   pintarAlertas(); pintarMundo(); addEventListener('resize', acomodarCapas);
   // el analista solo funciona dentro de Claude: en la web se quita la pestaña
-  if (!EN_CLAUDE && !window.VIGIA_NUBE) { $('#t-analista').hidden = true; TEMAS.splice(TEMAS.findIndex(t => t.h.includes('analista')), 1); }
+  if (!EN_CLAUDE && !window.VIGIA_NUBE?.analista) { $('#t-analista').hidden = true; TEMAS.splice(TEMAS.findIndex(t => t.h.includes('analista')), 1); }
   // ?lugar=UBIGEO abre ese territorio en vez de la vista inicial
   const ubigeoUrl = new URLSearchParams(location.search).get('lugar');
   const territorioUrl = ubigeoUrl && indiceConsulta().find(e => TERRITORIO[e.tipo] && e.obj.id === ubigeoUrl);

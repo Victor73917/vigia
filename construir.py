@@ -28,6 +28,9 @@ MARCA_PRUEBAS = ('<meta name="robots" content="noindex,nofollow">'
 NUBE_URL = os.environ.get("VIGIA_SUPABASE_URL", "").strip().rstrip("/")
 NUBE_ANON = os.environ.get("VIGIA_SUPABASE_ANON", "").strip()
 NUBE = PRUEBAS and bool(re.fullmatch(r"https://[a-z0-9]{10,40}\.supabase\.co", NUBE_URL)) and bool(re.fullmatch(r"[A-Za-z0-9._-]{20,400}", NUBE_ANON))
+# Analista IA (fase 8): la función «analista» de Supabase necesita la clave de Anthropic con crédito. Apagado mientras
+# no haya presupuesto; con VIGIA_ANALISTA=1 (variable de GitHub ANALISTA) se muestra la pestaña en el sitio de pruebas.
+ANALISTA = NUBE and os.environ.get("VIGIA_ANALISTA") == "1"
 if PRUEBAS and (NUBE_URL or NUBE_ANON) and not NUBE:
     print("AVISO: VIGIA_SUPABASE_URL o VIGIA_SUPABASE_ANON no tienen el formato esperado; el centro de comando no se incluye")
 DESCRIPCION = ("El Niño Costero en el norte del Perú: lluvias, crecidas de ríos, emergencias y "
@@ -54,7 +57,7 @@ ESQUELETO = (
     "body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>"
     f'<script>window.VIGIA_SITIO = "{SITIO}";</script>'
     + (MARCA_PRUEBAS if PRUEBAS else "")
-    + (f'<script>window.VIGIA_NUBE = {{ url: "{NUBE_URL}", anon: "{NUBE_ANON}" }};</script>'
+    + (f'<script>window.VIGIA_NUBE = {{ url: "{NUBE_URL}", anon: "{NUBE_ANON}", analista: {"true" if ANALISTA else "false"} }};</script>'
        '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>'
        '<script src="comando.js" defer></script>' if NUBE else "")
     + "</head><body>\n"
