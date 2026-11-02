@@ -17,9 +17,15 @@
   const TIPOS_REC = { brigada: 'Brigada', vehiculo: 'Vehículo', embarcacion: 'Embarcación', maquinaria: 'Maquinaria', equipo: 'Equipo' };
   const ROLES = { lector: 'Lector', operador: 'Operador', supervisor: 'Supervisor' };
 
+  const ESTADOS_REP = { recibido: 'Recibido, sin revisar', verificado: 'Verificado por un operador', descartado: 'Descartado', convertido: 'Convertido en incidencia' };
+  // números oficiales verificados en gob.pe (PNP: gob.pe/institucion/pnp/contacto-y-numeros-de-emergencias; SAMU: gob.pe/1013)
+  const EMERGENCIAS = [['105', 'Policía Nacional'], ['116', 'Bomberos'], ['106', 'SAMU (emergencias médicas)'], ['115', 'Defensa Civil']];
+
   let X, sb, yo = null, canal = null, recarga = null, eligiendo = null;
-  const D = { inc: [], rec: [], mis: [], mr: [], bit: [], per: [] };
+  const D = { inc: [], rec: [], mis: [], mr: [], bit: [], per: [], rep: [] };
   const V = { filtro: 'activas', sel: null, nueva: null, error: '' };
+  const R = { borrador: { tipo: 'inundacion' }, enviado: null, seguimiento: null, publicos: [] };
+  const cuerpoRep = () => document.getElementById('reportarCuerpo');
   const cuerpo = () => document.getElementById('comandoCuerpo');
   const e = s => X.esc(s ?? '');
   const puedeEditar = () => yo && (yo.rol === 'operador' || yo.rol === 'supervisor');
@@ -60,7 +66,11 @@
     X.cargarTerritorio();
     sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') salir(false); });
     addEventListener('vigia:comando', pintar);
+    addEventListener('vigia:reportar', pintarReportar);
     pintar();
+    pintarReportar();
+    cargarPublicos();
+    setInterval(cargarPublicos, 5 * 60000);
   }
 
   async function pintar() {
@@ -146,21 +156,22 @@
   /* ---------- datos ---------- */
   async function cargarTodo() {
     const { data: { user } } = await sb.auth.getUser();
-    const [per, inc, rec, mis, mr, bit] = await Promise.all([
+    const [per, inc, rec, mis, mr, bit, rep] = await Promise.all([
       sb.from('perfiles').select('*').order('correo'),
       sb.from('incidencias').select('*').order('creado', { ascending: false }),
       sb.from('recursos').select('*').order('departamento').order('nombre'),
       sb.from('misiones').select('*').order('creado', { ascending: false }),
       sb.from('mision_recursos').select('*'),
       sb.from('bitacora').select('*').order('momento', { ascending: false }).limit(40),
+      sb.from('reportes').select('*').in('estado', ['recibido', 'verificado']).order('creado', { ascending: false }).limit(100),
     ]);
-    const err = [per, inc, rec, mis, mr, bit].find(r => r.error);
+    const err = [per, inc, rec, mis, mr, bit, rep].find(r => r.error);
     if (err) V.error = err.error.message;
-    D.per = per.data || []; D.inc = inc.data || []; D.rec = rec.data || []; D.mis = mis.data || []; D.mr = mr.data || []; D.bit = bit.data || [];
+    D.per = per.data || []; D.inc = inc.data || []; D.rec = rec.data || []; D.mis = mis.data || []; D.mr = mr.data || []; D.bit = bit.data || []; D.rep = rep.data || [];
     yo = D.per.find(p => p.id === user.id) || { id: user.id, correo: user.email, rol: 'lector', departamentos: [] };
     if (!canal) {
       canal = sb.channel('comando');
-      for (const t of ['incidencias', 'recursos', 'misiones']) canal.on('postgres_changes', { event: '*', schema: 'public', table: t }, () => { clearTimeout(recarga); recarga = setTimeout(async () => { await cargarTodo(); panel(); }, 600); });
+      for (const t of ['incidencias', 'recursos', 'misiones', 'reportes']) canal.on('postgres_changes', { event: '*', schema: 'public', table: t }, () => { clearTimeout(recarga); recarga = setTimeout(async () => { await cargarTodo(); panel(); }, 600); });
       canal.subscribe();
     }
     capaMapa();
@@ -192,6 +203,7 @@
       </div>
       ${puedeEditar() ? (V.nueva ? formNueva() : '<p><button class="btn prim" type="button" data-cmd-nueva>+ Nueva incidencia</button></p>') : ''}
       ${sel ? detalle(sel) : ''}
+      ${bandeja()}
       <h3>Incidencias</h3>
       <div class="fila-botones" role="group" aria-label="Filtrar incidencias">
         <button class="btn${V.filtro === 'activas' ? ' prim' : ''}" type="button" data-cmd-filtro="activas">Activas (${activas.length})</button>
@@ -249,6 +261,21 @@
     </div>`;
   }
 
+  // reportes ciudadanos sin cerrar: el operador los verifica, los descarta o los convierte en incidencia
+  function bandeja() {
+    if (!D.rep.length) return '<h3>Reportes ciudadanos</h3><p class="vacio">Ningún reporte pendiente.</p>';
+    return `<h3>Reportes ciudadanos (${D.rep.length})</h3><div class="cmd-lista">${D.rep.map(r => `
+      <div class="cmd-det" data-cmd-rep="${r.id}"><p><b>${TIPOS[r.tipo]}</b> · ${e(nomDist(r.ubigeo))} · ${hace(r.creado)} · ${ESTADOS_REP[r.estado]} ${ficticio}</p>
+        <p>${e(r.descripcion)}</p><p class="meta">Código ${e(r.codigo)} · sin datos de contacto</p>
+        ${puedeEditar() ? `<div class="fila-botones">
+          <button class="btn" type="button" data-rep-ir>Ver en el mapa</button>
+          ${r.estado === 'recibido' ? '<button class="btn" type="button" data-rep-estado="verificado">Verificar</button>' : ''}
+          <button class="btn" type="button" data-rep-estado="descartado">Descartar</button>
+          <select data-rep-nivel aria-label="Nivel de la incidencia">${Object.entries(NIVELES).map(([k, [t]]) => `<option value="${k}"${k === '2' ? ' selected' : ''}>${t}</option>`).join('')}</select>
+          <button class="btn prim" type="button" data-rep-convertir>Convertir en incidencia</button></div>` : ''}
+      </div>`).join('')}</div>`;
+  }
+
   function usuarios() {
     return `<h3>Usuarios</h3>
       <p class="meta">Los usuarios se crean en Supabase (Authentication). Aquí se asigna su rol y sus departamentos (códigos del INEI separados por comas, por ejemplo 20, 24).</p>
@@ -280,7 +307,7 @@
     if (fn) {
       const guardarBorrador = () => { const f = new FormData(fn); Object.assign(V.nueva, { titulo: f.get('titulo'), tipo: f.get('tipo'), nivel: Number(f.get('nivel')), descripcion: f.get('descripcion') }); };
       fn.querySelector('[data-cmd-cancelar]').onclick = () => { V.nueva = null; eligiendo = null; panel(); };
-      fn.querySelector('[data-cmd-ubicar]').onclick = () => { guardarBorrador(); ubicar(); };
+      fn.querySelector('[data-cmd-ubicar]').onclick = () => { guardarBorrador(); panel(); ubicar(p => { Object.assign(V.nueva, p); X.abrirVista('comando'); panel(); }, panel); };
       fn.onsubmit = async ev => {
         ev.preventDefault(); guardarBorrador();
         const n = V.nueva;
@@ -288,6 +315,13 @@
         if (ok) { V.nueva = null; panel(); }
       };
     }
+    c.querySelectorAll('[data-cmd-rep]').forEach(caja => {
+      const r = D.rep.find(x => x.id === Number(caja.dataset.cmdRep));
+      caja.querySelector('[data-rep-ir]')?.addEventListener('click', () => irA(r));
+      caja.querySelectorAll('[data-rep-estado]').forEach(b => { b.onclick = () => hacer(sb.from('reportes').update({ estado: b.dataset.repEstado, revisado: new Date().toISOString(), revisado_por: yo.id }).eq('id', r.id), b.dataset.repEstado === 'verificado' ? 'Reporte verificado: ya aparece en el mapa público' : 'Reporte descartado'); });
+      const conv = caja.querySelector('[data-rep-convertir]');
+      if (conv) conv.onclick = () => hacer(sb.rpc('convertir_reporte', { p_reporte: r.id, p_nivel: Number(caja.querySelector('[data-rep-nivel]').value), p_titulo: conMarca(`${TIPOS[r.tipo]} reportado en ${X.titulo(X.TERR?.distritos.find(d => d[0] === r.ubigeo)?.[1] || r.ubigeo)}`) }), 'Reporte convertido en incidencia');
+    });
     c.querySelectorAll('[data-cmd-per]').forEach(tr => {
       const id = tr.dataset.cmdPer, rol = tr.querySelector('[data-cmd-rol]'), deps = tr.querySelector('[data-cmd-deps]');
       const guardar = () => {
@@ -305,20 +339,104 @@
   /* ---------- mapa ---------- */
   function irA(i) { if (i) X.G?.irA?.(i.lat, i.lng, 40); }
 
-  function ubicar() {
+  // elegir un punto del Perú en el mapa; listo recibe { lat, lng, ubigeo }, fallo repinta el formulario
+  function ubicar(listo, fallo) {
     const map = X.G?.mapa;
-    if (!map) { X.avisoToast('El mapa no está disponible (globo de respaldo): no se puede ubicar la incidencia', 7000, 'info'); return; }
-    eligiendo = true; panel();
-    X.avisoToast('Toca el mapa donde ocurre la incidencia', 6000, 'info');
+    if (!map) { X.avisoToast('El mapa no está disponible (globo de respaldo): no se puede ubicar el punto', 7000, 'info'); return; }
+    eligiendo = true; fallo();
+    X.avisoToast('Toca el mapa donde ocurre', 6000, 'info');
+    if (matchMedia('(max-width: 899px)').matches) document.getElementById('mapa')?.scrollIntoView?.();
     map.getCanvas().style.cursor = 'crosshair';
     map.once('click', ev => {
       eligiendo = null; map.getCanvas().style.cursor = '';
       const { lat, lng } = ev.lngLat, t = X.distritoPeruEn(lat, lng);
-      if (!t) { X.avisoToast('Ese punto no está dentro de un distrito del Perú', 6000, 'info'); panel(); return; }
-      Object.assign(V.nueva, { lat: +lat.toFixed(5), lng: +lng.toFixed(5), ubigeo: t[0] });
-      X.abrirVista('comando');
-      panel();
+      if (!t) { X.avisoToast('Ese punto no está dentro de un distrito del Perú', 6000, 'info'); fallo(); return; }
+      listo({ lat: +lat.toFixed(5), lng: +lng.toFixed(5), ubigeo: t[0] });
     });
+  }
+
+  /* ---------- portal ciudadano: reportar sin cuenta ---------- */
+  function pintarReportar() {
+    const c = cuerpoRep();
+    if (!c || !sb) return;
+    const b = R.borrador, s = R.seguimiento;
+    c.innerHTML = `
+      <div class="cmd-aviso"><b>Si hay personas en peligro, llama ya:</b> ${EMERGENCIAS.map(([n, t]) => `<a href="tel:${n}"><b>${n}</b></a> ${t}`).join(' · ')}.
+        Este portal no reemplaza a esos números ni al COEN-INDECI.</div>
+      <div class="cmd-aviso">Entorno de pruebas: lo que envíes aquí es un reporte ${ficticio} para probar el sistema. Nadie lo atenderá en la realidad.</div>
+      ${R.enviado ? `<div class="cmd-det"><h3>Reporte enviado</h3><p>Tu código de seguimiento es <b style="font-size:20px;letter-spacing:.08em">${e(R.enviado)}</b>. Guárdalo: con él puedes ver más abajo si un operador lo revisó.</p><button class="btn" type="button" data-rep-otro>Enviar otro reporte</button></div>` : `
+      <form class="cmd-form" id="repForm" autocomplete="off">
+        <label>¿Qué está pasando?<select name="tipo">${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}"${b.tipo === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label>Cuéntalo en pocas palabras (de 10 a 1 000 letras)<textarea name="descripcion" rows="4" maxlength="1000" required>${e(b.descripcion || '')}</textarea></label>
+        <p class="meta">No escribas nombres, DNI, teléfonos ni direcciones exactas. VIGÍA no pide ni guarda datos personales.</p>
+        <div class="fila"><button class="btn" type="button" data-rep-ubicar>${eligiendo ? 'Toca el mapa…' : 'Ubicar en el mapa'}</button>
+          ${navigator.geolocation ? '<button class="btn" type="button" data-rep-gps>Usar mi ubicación</button>' : ''}
+          <span>${b.ubigeo ? e(nomDist(b.ubigeo)) : '<small>Sin ubicación</small>'}</span></div>
+        <label class="cmd-rec"><input type="checkbox" name="acepto" required> Entiendo que es una prueba y que mi reporte es ficticio</label>
+        <div class="fila"><button class="btn prim" type="submit"${b.ubigeo ? '' : ' disabled'}>Enviar reporte</button></div>
+        <p class="cmd-error" role="alert">${e(b.error || '')}</p>
+      </form>`}
+      <h3>Seguir un reporte</h3>
+      <form class="cmd-form" id="repSeguir" autocomplete="off"><div class="fila">
+        <input name="codigo" maxlength="10" placeholder="Código de 10 letras y números" aria-label="Código de seguimiento" value="${e(s?.codigo || '')}">
+        <button class="btn" type="submit">Consultar</button></div></form>
+      ${s ? (s.fila ? `<p><b>${ESTADOS_REP[s.fila.estado]}</b> · ${TIPOS[s.fila.tipo]} en ${e(nomDist(s.fila.ubigeo))} · enviado ${hace(s.fila.creado)}${s.fila.revisado ? ` · revisado ${hace(s.fila.revisado)}` : ''}${s.fila.nota ? `<br>Nota: ${e(s.fila.nota)}` : ''}</p>` : '<p class="vacio">No hay ningún reporte con ese código.</p>') : ''}
+      <h3>Reportes verificados en el mapa</h3>
+      <p class="meta">${R.publicos.length} en los últimos 7 días. Solo se muestran los que revisó un operador, sin descripción y con la ubicación aproximada (unos 1 km).</p>`;
+    enlazarReportar();
+  }
+
+  function enlazarReportar() {
+    const c = cuerpoRep(), f = c.querySelector('#repForm');
+    c.querySelector('[data-rep-otro]')?.addEventListener('click', () => { R.enviado = null; R.borrador = { tipo: 'inundacion' }; pintarReportar(); });
+    c.querySelector('#repSeguir').onsubmit = async ev => {
+      ev.preventDefault();
+      const codigo = String(new FormData(ev.target).get('codigo') || '').trim().toUpperCase();
+      if (!codigo) return;
+      const { data, error } = await sb.rpc('estado_reporte', { p_codigo: codigo });
+      R.seguimiento = { codigo, fila: error ? null : data?.[0] };
+      pintarReportar();
+    };
+    if (!f) return;
+    const guardar = () => { const d = new FormData(f); Object.assign(R.borrador, { tipo: d.get('tipo'), descripcion: d.get('descripcion') }); };
+    const puesto = p => { Object.assign(R.borrador, p, { error: '' }); X.abrirVista('reportar'); pintarReportar(); };
+    f.querySelector('[data-rep-ubicar]').onclick = () => { guardar(); ubicar(puesto, pintarReportar); };
+    f.querySelector('[data-rep-gps]')?.addEventListener('click', () => {
+      guardar();
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude: lat, longitude: lng } = pos.coords, t = X.distritoPeruEn(lat, lng);
+        if (!t) { R.borrador.error = 'Tu ubicación no está dentro de un distrito del Perú. Ubícalo en el mapa.'; pintarReportar(); return; }
+        puesto({ lat: +lat.toFixed(5), lng: +lng.toFixed(5), ubigeo: t[0] });
+      }, () => { R.borrador.error = 'No se pudo obtener tu ubicación. Ubícalo en el mapa.'; pintarReportar(); }, { timeout: 15000 });
+    });
+    f.onsubmit = async ev => {
+      ev.preventDefault(); guardar();
+      const b = R.borrador, texto = String(b.descripcion || '').trim();
+      if (texto.length < 10) { b.error = 'Escribe al menos 10 letras.'; pintarReportar(); return; }
+      const { data, error } = await sb.rpc('enviar_reporte', { p_tipo: b.tipo, p_descripcion: /\[FICTICIO\]/i.test(texto) ? texto : '[FICTICIO] ' + texto, p_ubigeo: b.ubigeo, p_lat: b.lat, p_lng: b.lng });
+      if (error) { b.error = error.message.includes('demasiados') || error.message.includes('varios') ? error.message : 'No se pudo enviar. Revisa los datos e intenta otra vez.'; pintarReportar(); return; }
+      R.enviado = data; R.seguimiento = { codigo: data, fila: null };
+      pintarReportar();
+    };
+  }
+
+  async function cargarPublicos() {
+    const { data, error } = await sb.rpc('reportes_publicos');
+    if (error) return;
+    R.publicos = data || [];
+    capaPublicos();
+    if (!document.getElementById('p-reportar')?.hidden) pintarReportar();
+  }
+
+  function capaPublicos(intento = 0) {
+    const map = X?.G?.mapa;
+    if (!map) { if (intento < 30 && !X?.G) setTimeout(() => capaPublicos(intento + 1), 2000); return; } // el mapa carga después
+    const datos = { type: 'FeatureCollection', features: R.publicos.map(r => ({ type: 'Feature', properties: { t: TIPOS[r.tipo] }, geometry: { type: 'Point', coordinates: [r.lng, r.lat] } })) };
+    if (map.getSource('rep-pub')) { map.getSource('rep-pub').setData(datos); return; }
+    map.addSource('rep-pub', { type: 'geojson', data: datos });
+    map.addLayer({ id: 'rep-pub', type: 'circle', source: 'rep-pub', paint: {
+      'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': X.COL.lluvia, 'circle-stroke-width': 2.5,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 4, 10, 9] } });
   }
 
   function capaMapa() {

@@ -6,6 +6,7 @@
 
 begin;
 
+delete from public.reportes where ficticio;
 delete from public.mision_recursos;
 delete from public.misiones where ficticio;
 delete from public.incidencias where ficticio;
@@ -51,5 +52,10 @@ insert into public.mision_recursos (mision_id, recurso_id)
 select m.id, r.id from public.misiones m, public.recursos r
  where (m.titulo like '%Achique%' and r.nombre in ('[FICTICIO] Brigada de rescate 1', '[FICTICIO] Motobomba de achique'))
     or (m.titulo like '%Limpieza%' and r.nombre = '[FICTICIO] Retroexcavadora');
+
+insert into public.reportes (tipo, descripcion, ubigeo, lat, lng, estado, creado, revisado) values
+  ('inundacion', '[FICTICIO] El agua entró a varias casas de la calle principal. Dato inventado para probar el portal.', '200105', -5.268, -80.679, 'recibido', now() - interval '40 minutes', null),
+  ('huaico', '[FICTICIO] Bajó lodo por la quebrada y tapó el camino al caserío. Dato inventado para probar el portal.', '200304', -5.571, -79.520, 'verificado', now() - interval '5 hours', now() - interval '4 hours'),
+  ('lluvia_intensa', '[FICTICIO] Llueve fuerte desde la madrugada y hay charcos grandes. Dato inventado para probar el portal.', '140101', -6.775, -79.838, 'recibido', now() - interval '15 minutes', null);
 
 commit;

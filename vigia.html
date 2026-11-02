@@ -758,6 +758,7 @@ button.aero:hover{border-color:var(--filo-2)}
       <button role="tab" id="t-nino" aria-controls="p-nino" aria-selected="false" data-vista="nino">El Niño</button>
       <button role="tab" id="t-lugar" aria-controls="p-lugar" aria-selected="false" data-vista="lugar">Lugar</button>
       <button role="tab" id="t-comparar" aria-controls="p-comparar" aria-selected="false" data-vista="comparar">Comparar</button>
+      <button role="tab" id="t-reportar" aria-controls="p-reportar" aria-selected="false" data-vista="reportar" hidden>Reportar</button>
       <button role="tab" id="t-comando" aria-controls="p-comando" aria-selected="false" data-vista="comando" hidden>Comando</button>
       <button role="tab" id="t-analista" aria-controls="p-analista" aria-selected="false" data-vista="analista">Analista</button>
     </div>
@@ -865,6 +866,10 @@ button.aero:hover{border-color:var(--filo-2)}
         <form class="buscador" id="formComparar" autocomplete="off"><input id="txtComparar" aria-label="Distrito, provincia o departamento para comparar" placeholder="Agregar: «Huancayo», «Loreto», «Paucarpata»…"><button class="btn" type="submit">Buscar</button></form>
         <div id="opcionesComparar" class="opciones-comparar"></div>
         <div id="cuerpoComparar"></div>
+      </section>
+      <section class="vista" id="p-reportar" role="tabpanel" aria-labelledby="t-reportar" hidden>
+        <div><h2>Reportar un peligro</h2><p class="meta">Portal ciudadano · entorno de pruebas · solo reportes ficticios</p></div>
+        <div id="reportarCuerpo"><p class="vacio">Cargando…</p></div>
       </section>
       <section class="vista" id="p-comando" role="tabpanel" aria-labelledby="t-comando" hidden>
         <div><h2>Centro de comando</h2><p class="meta">Entorno de pruebas · solo datos ficticios · requiere sesión y verificación en dos pasos</p></div>
@@ -1099,7 +1104,7 @@ $('#gestor').addEventListener('input', e => {
 $('#gestor').addEventListener('click', e => { const b = e.target.closest('[data-base]'); if (b) { G?.base(b.dataset.base); pintarGestor(); } });
 
 /* ---------------- pestañas y hoja inferior ---------------- */
-const VISTAS = ['ops', 'emergencias', 'rios', 'lluvia', 'nino', 'lugar', 'comparar', 'comando', 'analista'];
+const VISTAS = ['ops', 'emergencias', 'rios', 'lluvia', 'nino', 'lugar', 'comparar', 'reportar', 'comando', 'analista'];
 // en escritorio, «Lugar» no es una pestaña: es el panel derecho, que se abre al elegir un lugar
 const lugarVisible = () => esMovil() ? UI.vista === 'lugar' : !$('#contexto').hidden;
 function bordesPaneles() {
@@ -1144,6 +1149,7 @@ function abrirVista(v, { desplegar = true } = {}) {
   if (v === 'ops') pintarOps();
   if (v === 'comparar') pintarComparar();
   if (v === 'comando') dispatchEvent(new Event('vigia:comando'));
+  if (v === 'reportar') dispatchEvent(new Event('vigia:reportar'));
   if (v === 'emergencias') pintarEmergencias();
   if (v === 'rios') pintarRios();
   if (v === 'lugar' && UI.lugar) pintarLugar();
@@ -5040,7 +5046,7 @@ function arrancar() {
   pintarNavMapa();
   addEventListener('keydown', e => { if (e.key === 'Home' && !e.target.closest?.('input,textarea,select')) { e.preventDefault(); G?.vistaNacional(); } });
   if (window.VIGIA_NUBE) {
-    $('#t-comando').hidden = false;
+    $('#t-comando').hidden = false; $('#t-reportar').hidden = false;
     window.VIGIA_EXT = { get G() { return G; }, distritoPeruEn, cargarTerritorio, get TERR() { return TERR; }, titulo, esc, num, fmt, hora, avisoToast, abrirVista, COL };
     dispatchEvent(new Event('vigia:ext'));
   }
