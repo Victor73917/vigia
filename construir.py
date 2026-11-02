@@ -7,6 +7,8 @@ y para la web pública también la descripción y la vista previa al compartir e
 Con --paquete además arma la carpeta publicar/ y vigia-web.zip para subir a Netlify.
 """
 
+import base64
+import hashlib
 import os
 import re
 import shutil
@@ -81,9 +83,35 @@ if NUBE:
     PUBLICAR.append("comando.js")
 
 
+# Política de seguridad de contenido (fase 9). GitHub Pages no permite cabeceras, así que va como <meta>.
+# Solo se cargan scripts propios, de jsDelivr (MapLibre, three.js, Supabase) y los scripts en línea cuyo hash calcula
+# este programa; los datos solo se piden a las fuentes que usa VIGÍA. Si se agrega una fuente nueva, va en esta lista.
+FUENTES_EN_VIVO = ("https://api.open-meteo.com https://ensemble-api.open-meteo.com https://flood-api.open-meteo.com "
+                   "https://gibs.earthdata.nasa.gov https://www.gdacs.org")
+TESELAS = "https://server.arcgisonline.com https://*.basemaps.cartocdn.com https://gibs.earthdata.nasa.gov"
+
+
+def politica(html):
+    hashes = sorted({"'sha256-" + base64.b64encode(hashlib.sha256(m.group(1).encode("utf-8")).digest()).decode() + "'"
+                     for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)})
+    nube = f" {NUBE_URL} wss://{NUBE_URL.split('//', 1)[1]}" if NUBE else ""
+    return ("default-src 'self'; "
+            f"script-src 'self' https://cdn.jsdelivr.net {' '.join(hashes)}; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            f"img-src 'self' data: blob: {TESELAS}; "
+            f"connect-src 'self' https://cdn.jsdelivr.net {FUENTES_EN_VIVO} {TESELAS}{nube}; "
+            "worker-src 'self' blob: https://cdn.jsdelivr.net; child-src blob:; frame-src 'none'; object-src 'none'; "
+            "base-uri 'self'; form-action 'self'; upgrade-insecure-requests")
+
+
 def construir():
     contenido = (BASE / "vigia.html").read_text(encoding="utf-8")
-    (BASE / "index.html").write_text(ESQUELETO + contenido + "\n</body></html>\n", encoding="utf-8")
+    html = ESQUELETO + contenido + "\n</body></html>\n"
+    meta = (f'<meta http-equiv="Content-Security-Policy" content="{politica(html)}">'
+            '<meta name="referrer" content="strict-origin-when-cross-origin">')
+    html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">' + meta, 1)
+    (BASE / "index.html").write_text(html, encoding="utf-8", newline="\n")
     print("index.html listo")
 
 
