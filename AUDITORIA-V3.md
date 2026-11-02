@@ -403,3 +403,27 @@ Por eso se cambió al método del río con nombre.
 - la inscripción del banco de datos;
 - un proyecto en São Paulo con plan Pro;
 - quitar a conciencia la restricción de datos ficticios.
+
+---
+
+## 15. Fase 8: analista IA, preparado pero apagado (2 de noviembre de 2026)
+
+**Decisión del usuario:** no activarlo por ahora, porque la API de Claude se paga.
+
+Está todo listo para encenderlo:
+
+| Pieza | Estado |
+|---|---|
+| Función de Supabase `analista` (`nube/supabase/functions/analista/index.ts`) | Desplegada. Usa Claude Haiku 5.5, con un tope de 30 preguntas al día para todo el sitio, solo acepta los orígenes de VIGÍA y no guarda preguntas ni respuestas. Sin el secreto `ANTHROPIC_API_KEY` responde «no disponible» (comprobado: 503 `clave`). Sin la clave pública de la página la rechaza (401) |
+| Tope diario (`004_analista.sql`) | Aplicado. `usar_analista()` solo la puede llamar la clave de servicio |
+| Pestaña «Analista» en la web | Oculta en producción y en /pruebas/. Aparece solo con la variable de GitHub `ANALISTA = 1` |
+| Dentro de Claude (artefacto) | Sigue funcionando como antes, con la cuenta de Claude de quien lo usa y sin costo para VIGÍA |
+
+**Costo estimado si se activa:** menos de 0,005 USD por pregunta con Haiku 5.5, es decir, unos 4 USD al mes con el tope de 30 preguntas diarias.
+
+**Para encenderlo:**
+1. Crear la cuenta en console.anthropic.com, cargar crédito y poner un límite mensual.
+2. Crear una clave y guardarla como secreto `ANTHROPIC_API_KEY` en Supabase (Edge Functions → Secrets).
+3. Crear la variable de GitHub `ANALISTA` con el valor `1`.
+
+**Lo detectó la prueba automática:** la primera versión web llamaba a `sample.limits()`, que solo existe dentro de Claude. La navegación falló y no se publicó nada en producción; se corrigió.
