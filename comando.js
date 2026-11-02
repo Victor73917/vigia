@@ -428,9 +428,9 @@
     if (!document.getElementById('p-reportar')?.hidden) pintarReportar();
   }
 
-  function capaPublicos(intento = 0) {
+  function capaPublicos() {
     const map = X?.G?.mapa;
-    if (!map) { if (intento < 30 && !X?.G) setTimeout(() => capaPublicos(intento + 1), 2000); return; } // el mapa carga después
+    if (!map) { if (!X?.G) setTimeout(capaPublicos, 3000); return; } // el mapa carga después (en una pestaña oculta, recién al mostrarla)
     const datos = { type: 'FeatureCollection', features: R.publicos.map(r => ({ type: 'Feature', properties: { t: TIPOS[r.tipo] }, geometry: { type: 'Point', coordinates: [r.lng, r.lat] } })) };
     if (map.getSource('rep-pub')) { map.getSource('rep-pub').setData(datos); return; }
     map.addSource('rep-pub', { type: 'geojson', data: datos });
@@ -441,7 +441,7 @@
 
   function capaMapa() {
     const map = X?.G?.mapa;
-    if (!map) return;
+    if (!map) { if (X && !X.G && yo) setTimeout(capaMapa, 3000); return; }
     const fs = D.inc.filter(i => i.estado !== 'cerrada').map(i => ({ type: 'Feature', properties: { id: i.id, n: i.nivel, t: i.titulo }, geometry: { type: 'Point', coordinates: [i.lng, i.lat] } }));
     const datos = { type: 'FeatureCollection', features: fs };
     if (map.getSource('cmd-inc')) { map.getSource('cmd-inc').setData(datos); return; }
