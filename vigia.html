@@ -461,6 +461,7 @@ button.aero:hover{border-color:var(--filo-2)}
 .tiempo .col>i.em.grave::before{background:var(--rojo);opacity:.9}
 .tiempo .enfen{position:absolute;top:1px;right:1px;width:6px;height:6px;transform:rotate(45deg);background:var(--sat)}
 .tiempo .enfen.prox{background:transparent;border:1px solid var(--sat)}
+.nota-enfen{font-size:12.5px;color:var(--tinta-2);border-left:2px solid var(--sodio);padding-left:8px}
 .tiempo-ops{margin-top:-4px}
 .tiempo-ops .tiempo .fecha{font-size:9px}
 
@@ -934,10 +935,10 @@ const DATA = {
   zona: S.zona || null, aerodromos: S.aerodromos || [], termica: S.termica || null,
   emergencias: S.emergencias?.emergencias || [], cuencas: S.cuencas?.cuencas || [], imagenZona: S.imagen_zona || null,
   mm: S.multimodelo || null, riosEc: S.rios_ec || [], ens: S.ensamble || null, mundo: S.mundo || [], oceano: S.oceano || null,
-  riosPe: S.rios_pe?.rios || [], riosPeMeta: S.rios_pe || null,
+  riosPe: S.rios_pe?.rios || [], riosPeMeta: S.rios_pe || null, rayos: S.rayos || null,
 };
 const FRESCO = {};
-for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano', 'rios_pe']) FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
+for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano', 'rios_pe', 'rayos']) FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
 
 const WMO = { 0: 'Despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Niebla', 48: 'Niebla con escarcha', 51: 'Llovizna débil', 53: 'Llovizna', 55: 'Llovizna intensa', 56: 'Llovizna helada', 57: 'Llovizna helada intensa', 61: 'Lluvia débil', 63: 'Lluvia moderada', 65: 'Lluvia fuerte', 66: 'Lluvia helada', 67: 'Lluvia helada fuerte', 71: 'Nieve débil', 73: 'Nieve', 75: 'Nieve fuerte', 77: 'Granizo fino', 80: 'Chubascos débiles', 81: 'Chubascos', 82: 'Chubascos fuertes', 85: 'Chubascos de nieve', 86: 'Chubascos de nieve fuertes', 95: 'Tormenta eléctrica', 96: 'Tormenta con granizo', 99: 'Tormenta con granizo fuerte' };
 // Ríos con caudales sobre lo normal según el Comunicado Oficial ENFEN 19-2026
@@ -994,6 +995,7 @@ const CAPAS = [
   { id: 'termica', g: 'Zona norte', n: 'Imagen térmica', sub: 'GOES-East · infrarrojo', c: 'int', off: true },
   { id: 'avisos', g: 'Lluvia', n: 'Avisos SENAMHI', sub: 'lluvias y huaicos · Perú', c: 'naranja', off: true },
   { id: 'lluvia', g: 'Lluvia', n: 'Lluvia pronosticada', sub: 'ECMWF · próximas 24 h', c: 'lluvia', off: true },
+  { id: 'rayos', g: 'Lluvia', n: 'Rayos', sub: 'GOES-19 · 60 minutos', c: 'tormenta', off: true, soloMapa: true },
   { id: 'nino', g: 'El Niño', n: 'Regiones El Niño', sub: 'NOAA · anomalía semanal', c: 'calido', off: true },
   { id: 'mundo', g: 'El Niño', n: 'Desastres en el mundo', sub: 'GDACS · inundación, ciclón, sequía', c: 'naranja' },
   { id: 'ciudades', g: 'El Niño', n: 'Ciudades', sub: 'Perú y Ecuador', c: 'tinta-2' },
@@ -1020,6 +1022,7 @@ const CAPA_INFO = {
   termica: { f: 'NOAA GOES-East, banda 13, vía NASA GIBS', tipo: 'Observación satelital', k: 'termica' },
   avisos: { f: 'SENAMHI, avisos meteorológicos', tipo: 'Aviso oficial', k: 'avisos', ley: [['rojo', 'rojo'], ['naranja', 'naranja'], ['amarillo', 'amarillo']] },
   lluvia: { f: () => UI.lluvia.producto === 'imerg' ? 'NASA GPM IMERG' : 'ECMWF IFS 0,25°', tipo: () => UI.lluvia.producto === 'imerg' ? 'Estimación satelital' : 'Pronóstico de modelo', k: () => UI.lluvia.producto === 'imerg' ? 'imerg' : 'ecmwf' },
+  rayos: { f: 'NOAA GOES-19, sensor de rayos GLM', tipo: 'Observación satelital', k: 'rayos', ley: [['tinta', 'hace menos de 10 min'], ['tormenta', '10 a 30 min'], ['tinta-3', '30 a 60 min']] },
   nino: { f: 'NOAA OISST', tipo: 'Observación', k: 'nino' },
   mundo: { f: 'GDACS (ONU y Comisión Europea)', tipo: 'Alerta internacional', k: 'mundo' },
   ciudades: { f: 'Open-Meteo (ECMWF)', tipo: 'Pronóstico de modelo', k: 'clima' },
@@ -1027,7 +1030,7 @@ const CAPA_INFO = {
 function pintarGestor() {
   const v = x => typeof x === 'function' ? x() : x, base = G?.baseActual?.();
   $('#cuerpoGestor').innerHTML = (base ? `<div class="bases" role="radiogroup" aria-label="Mapa base">${Object.entries(BASES).map(([k, b]) => `<button type="button" role="radio" aria-checked="${k === base}" data-base="${k}">${esc(b.n)}</button>`).join('')}</div>` : '') +
-    CAPAS.map(c => {
+    CAPAS.filter(c => !(c.soloMapa && !base)).map(c => {
       const i = CAPA_INFO[c.id] || {}, k = v(i.k), fr = k && FRESCO[k], op = UI.opac[c.id] ?? (c.id === 'termica' ? UI.termica.opacidad : 1);
       return `<div class="fila-gestor" style="--c:var(--${c.c})"><label><input type="checkbox" data-g-capa="${c.id}" ${UI.capas[c.id] ? 'checked' : ''}><b>${esc(c.n)}</b></label>
         ${G?.opacidad ? `<input type="range" min="10" max="100" value="${Math.round(op * 100)}" data-g-op="${c.id}" aria-label="Opacidad de ${esc(c.n)}">` : ''}
@@ -1053,13 +1056,14 @@ function contarCapa(id) {
     case 'expuestos': return (DATA.zona?.ccpp.length || 0) + (DATA.zona?.eess.length || 0) + (DATA.zona?.iiee.length || 0);
     case 'termica': { const h = UI.termica.hora || DATA.termica?.hora; return h ? hora(Date.parse(h)) : '–'; }
     case 'imagen': return DATA.imagenZona ? '10 m' : '–';
+    case 'rayos': return DATA.rayos ? DATA.rayos.total : '–';
   }
   return 0;
 }
 function pintarCapas() {
   let grupo = '';
   const plegado = $('#capas').dataset.plegado === 'true';
-  $('#capas').innerHTML = `<button class="capas-plegar" type="button" data-plegar aria-expanded="${!plegado}">Capas del globo <span>${plegado ? '+' : '−'}</span></button>` + CAPAS.map(c => `${c.g !== grupo ? `<div class="grupo-capa">${esc(grupo = c.g)}</div>` : ''}
+  $('#capas').innerHTML = `<button class="capas-plegar" type="button" data-plegar aria-expanded="${!plegado}">Capas del globo <span>${plegado ? '+' : '−'}</span></button>` + CAPAS.filter(c => !(c.soloMapa && G && !G.baseActual)).map(c => `${c.g !== grupo ? `<div class="grupo-capa">${esc(grupo = c.g)}</div>` : ''}
     <button class="capa" type="button" data-capa="${c.id}" aria-pressed="${UI.capas[c.id]}" style="--c:var(--${c.c})">
       <i class="pt"></i><span><b>${esc(c.n)}</b><small>${esc(c.id === 'lluvia' ? subLluvia() : c.sub)}</small></span><em>${(n => typeof n === 'number' ? num(n) : esc(n))(contarCapa(c.id))}</em>
     </button>`).join('') + `<button class="capa-ajustes" type="button" data-gestor aria-haspopup="dialog">Opacidad, fuentes y mapa base…</button>`;
@@ -1377,6 +1381,7 @@ const FUENTES = [
   { k: 'conjunto', n: 'Conjunto ECMWF vía Open-Meteo', d: '51 escenarios para la probabilidad de lluvia', url: 'https://open-meteo.com/en/docs/ensemble-api' },
   { k: 'imerg', n: 'NASA GPM IMERG · GIBS', d: 'Lluvia estimada por satélite cada media hora', url: 'https://gpm.nasa.gov/data/imerg' },
   { k: 'termica', n: 'NOAA GOES-East vía NASA GIBS', d: 'Imagen infrarroja (banda 13) cada 10 minutos', url: 'https://www.star.nesdis.noaa.gov/GOES/' },
+  { k: 'rayos', n: 'NOAA GOES-19 · sensor de rayos GLM', d: 'Destellos de rayos sobre el Perú en los 60 minutos previos a cada actualización', url: 'https://www.goes-r.gov/spacesegment/glm.html' },
   { k: 'aerodromos', n: 'NOAA · Aviation Weather Center', d: 'METAR y TAF de los aeródromos de la zona', url: 'https://aviationweather.gov/' },
   { k: 'multimodelo', n: 'Siete modelos globales vía Open-Meteo', d: 'Lluvia cada 3 h a 72 h de ECMWF, GFS, ICON, UKMO, GEM, JMA y ARPEGE: escenarios probable y pesimista', url: 'https://open-meteo.com/en/docs' },
   { k: 'ensamble', n: 'GloFAS v4 · 51 escenarios', d: 'Probabilidad de pasar la crecida de 2, 5 y 20 años en los próximos 10 días, río por río', url: 'https://global-flood.emergency.copernicus.eu/' },
@@ -1423,11 +1428,12 @@ function pintarNino() {
   const e = DATA.enfen, ult = DATA.nino[DATA.nino.length - 1], oni = DATA.oni[DATA.oni.length - 1];
   if (e) {
     const nuevo = e.ultimo_publicado && e.ultimo_publicado.numero !== e.numero;
+    const pdf = e.pdf && /^https:\/\/enfen\.imarpe\.gob\.pe\//.test(e.pdf) ? e.pdf : e.url;
     $('#oficial').innerHTML = `
       <div class="estado"><span class="pill" style="--c:var(--calido)">Estado oficial</span><b>${esc(e.estado)}</b></div>
-      <p><strong>${esc(e.titular)}</strong></p>
-      <ul>${e.puntos.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-      <div class="pie">Comunicado Oficial ENFEN N° ${esc(e.numero)} · ${fmt(Date.parse(e.fecha + 'T12:00:00Z'), { day: 'numeric', month: 'long', year: 'numeric' }, 'UTC')} · próximo: ${fmt(Date.parse(e.proximo + 'T12:00:00Z'), { weekday: 'long', day: 'numeric', month: 'long' }, 'UTC')}${nuevo ? ` · <strong style="color:var(--sodio)">ENFEN ya publicó el N° ${esc(e.ultimo_publicado.numero)}</strong>` : ''} · <a href="${e.url}" target="_blank" rel="noopener">enfen.imarpe.gob.pe</a></div>`;
+      ${e.titular ? `<p><strong>${esc(e.titular)}</strong></p>` : ''}
+      ${e.automatico ? `<p class="nota-enfen">Comunicado nuevo: el estado, el titular y las fechas se leyeron solos del PDF oficial. El resumen en puntos (del N° ${esc(e.resumen_de)}) se retiró porque ya no corresponde; <a href="${esc(pdf)}" target="_blank" rel="noopener">lee el comunicado completo</a>.</p>` : `<ul>${e.puntos.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`}
+      <div class="pie">Comunicado Oficial ENFEN N° ${esc(e.numero)} · ${fmt(Date.parse(e.fecha + 'T12:00:00Z'), { day: 'numeric', month: 'long', year: 'numeric' }, 'UTC')}${e.proximo ? ` · próximo: ${fmt(Date.parse(e.proximo + 'T12:00:00Z'), { weekday: 'long', day: 'numeric', month: 'long' }, 'UTC')}` : ''}${nuevo ? ` · <strong style="color:var(--sodio)">ENFEN ya publicó el N° ${esc(e.ultimo_publicado.numero)}</strong>` : ''} · <a href="${esc(pdf)}" target="_blank" rel="noopener">${e.pdf ? 'PDF del comunicado' : 'enfen.imarpe.gob.pe'}</a></div>`;
   }
   if (!ult) return;
   $('#metaNino').textContent = ult ? `Semana del ${fmt(Date.parse(ult[0]), { day: 'numeric', month: 'long', year: 'numeric' }, 'UTC')} · NOAA OISST, base 1991–2020` : '';
@@ -1740,6 +1746,17 @@ const chipPrio = n => n >= 1 ? `<span class="nivel-chip" style="--c:var(--${NIVE
 // de quebradas del SENAMHI (por nombre de departamento, provincia y distrito) y emergencias del COEN-INDECI (por UBIGEO).
 // Que un distrito no tenga aviso no significa que no tenga riesgo: la tabla dice «sin aviso», nunca «sin riesgo».
 const CACHE_NAC = new Map(); // un cruce por día
+// rayos de la última corrida por distrito del INEI (el centro de cada celda de 5 km decide el distrito)
+let RAYOS_DIST = null;
+function rayosPorDistrito() {
+  if (!TERR || !DATA.rayos) return null;
+  if (RAYOS_DIST?.datos === DATA.rayos) return RAYOS_DIST.m;
+  const m = new Map();
+  for (const [lng, lat, n] of DATA.rayos.celdas || []) { const t = distritoPeruEn(lat, lng); if (t) m.set(t[0], (m.get(t[0]) || 0) + n); }
+  RAYOS_DIST = { datos: DATA.rayos, m };
+  return m;
+}
+const ventanaRayos = r => `${fmt(Date.parse(r.desde), { day: 'numeric', month: 'short' })}, ${hora(Date.parse(r.desde))} a ${hora(Date.parse(r.hasta))}`;
 function resumenNacional(dia) {
   if (!TERR) return null;
   if (CACHE_NAC.get(dia)?.datos === DATA) return CACHE_NAC.get(dia);
@@ -1770,12 +1787,13 @@ function resumenNacional(dia) {
     const t = distritoPeruEn(c.salida[0], c.salida[1]), d = t && dist.get(t[0]);
     if (d && (!d.rio || e.nivel > d.rio.nivel)) d.rio = { c, nivel: e.nivel, e };
   }
-  for (const d of dist.values()) d.prio = prioridadNac(d, dia);
+  const rd = rayosPorDistrito();
+  for (const d of dist.values()) { d.prio = prioridadNac(d, dia); d.rayos = rd?.get(d.id) || 0; }
   const deps = TERR.departamentos.map(([id, n]) => {
     const ds = [...dist.values()].filter(d => d.id.startsWith(id)), em = emergDep.get(id) || [];
     return { id, n, total: ds.length, aviso: Math.max(0, ...ds.map(d => d.aviso)), conAviso: ds.filter(d => d.aviso >= 2).length,
       porNivel: [4, 3, 2].map(k => ds.filter(d => d.aviso === k).length), quebrada: ds.filter(d => d.quebrada >= 2).length, emerg: em.length, victimas: em.filter(graveEmerg).length,
-      altas: ds.filter(d => d.prio.nivel === 3).length };
+      altas: ds.filter(d => d.prio.nivel === 3).length, rayos: ds.reduce((s, d) => s + d.rayos, 0) };
   });
   const r = { dia, datos: DATA, dist, deps, sinUbicar, numerosAviso: [...new Set(zonas.map(z => z.numero))] };
   CACHE_NAC.set(dia, r);
@@ -1796,6 +1814,7 @@ const FILTROS_NAC = {
   avisos: { n: 'distritos con aviso de lluvia del SENAMHI', nivel: d => d.aviso, color: n => COL[NIVEL_AVISO[n].c] },
   quebradas: { n: 'distritos con posible activación de quebradas', nivel: d => d.quebrada, color: n => COL[NIVEL_AVISO[n].c] },
   emergencias: { n: 'distritos con emergencias reportadas por el COEN-INDECI (30 días)', nivel: d => d.emerg.length ? (d.emerg.some(graveEmerg) ? 4 : 3) : 0, color: n => COL[n >= 4 ? 'rojo' : 'naranja'] },
+  rayos: { n: 'distritos con rayos detectados por el GOES-19 en la ventana de 60 minutos', nivel: d => d.rayos >= 50 ? 4 : d.rayos >= 10 ? 3 : d.rayos ? 2 : 0, color: () => COL.tormenta },
   prioridad: { n: 'distritos con prioridad de atención media o alta (criterio nacional de VIGÍA)', nivel: d => d.prio.nivel >= 2 ? d.prio.nivel + 1 : 0, color: n => COL[n >= 4 ? 'rojo' : n === 3 ? 'naranja' : 'amarillo'] },
 };
 // «hace 3 h» con aviso si la fuente no se actualiza desde hace más de un día
@@ -1822,6 +1841,7 @@ function pintarNacional({ encuadrar = false } = {}) {
   const em = DATA.emergencias, depsEm = R.deps.filter(d => d.emerg), vict = em.filter(graveEmerg).length;
   const rios = [...DATA.cuencas, ...DATA.riosPe].filter(c => c.historia?.mediana_max_anual), crecidas = rios.filter(c => (estadoCuenca(c)?.nivel || 0) >= 2).length;
   const dsPrio = [0, 0, 0, 0]; for (const d of R.dist.values()) dsPrio[d.prio.nivel]++;
+  const dsRayos = [...R.dist.values()].filter(d => d.rayos);
   const tarjeta = (k, titulo_, valor, detalle, fuente) => `<button class="kpi" type="button" data-filtro="${k}" aria-pressed="${UI.nac.filtro === k}"><small>${titulo_}</small><b>${valor}</b><span>${detalle}</span>${fuente}</button>`;
   $('#kpisNac').innerHTML =
     tarjeta('avisos', 'Departamentos con aviso de lluvia', num(depsAviso.length),
@@ -1833,6 +1853,10 @@ function pintarNacional({ encuadrar = false } = {}) {
     tarjeta('emergencias', 'Emergencias reportadas · 30 días', num(em.length),
       `en ${depsEm.length} departamentos${vict ? ` · <strong style="color:var(--rojo)">${vict} mencionan víctimas</strong>` : ''}`, fuenteHtml('COEN-INDECI', 'emergencias')) +
     tarjeta('prioridad', 'Distritos con prioridad alta · criterio nacional', num(dsPrio[3]), `${num(dsPrio[2])} con prioridad media · aviso, quebradas, emergencias y ríos`, '<span class="fuente">Cruce de VIGÍA, no oficial</span>') +
+    (DATA.rayos ? tarjeta('rayos', 'Rayos detectados · 60 minutos', num(DATA.rayos.total),
+      `${DATA.rayos.total ? `en ${num(dsRayos.length)} distritos de ${R.deps.filter(d => d.rayos).length} departamentos` : 'Ningún rayo sobre el Perú'} · ${ventanaRayos(DATA.rayos)}${DATA.rayos.perdidos ? ` · faltan ${DATA.rayos.perdidos} de ${DATA.rayos.archivos} archivos` : ''}`,
+      fuenteHtml('NOAA GOES-19 · GLM', 'rayos'))
+      : '<div class="kpi no-disp"><small>Rayos</small><b>Sin datos suficientes</b><span>Esta actualización no trae la detección de rayos del GOES-19</span></div>') +
     `<button class="kpi" type="button" data-ir="rios"><small>Ríos con crecida pronosticada</small><b>${num(crecidas)}</b><span>de ${rios.length} ríos con umbral de crecida${DATA.riosPeMeta ? ` · ${DATA.riosPe.length} de ${DATA.riosPeMeta.unidades + DATA.cuencas.filter(c => c.salida).length} cuencas con punto de control` : ' de la costa norte. El resto del país aún no tiene esta vigilancia'}</span>${fuenteHtml('GloFAS', 'cuencas')}</button>` +
     `<div class="kpi no-disp"><small>Reportes ciudadanos · misiones · recursos</small><b>No disponible</b><span>Requiere el servidor seguro del centro de comando (fase 6). No se muestran cifras simuladas</span></div>`;
   const ord = UI.nac.orden, val = {
@@ -1847,7 +1871,7 @@ function pintarNacional({ encuadrar = false } = {}) {
     <tr class="clic" data-dist-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${esc(titulo(d.prov || ''))} · ${esc(titulo(d.dep || ''))}</small></td><td>${chipPrio(d.prio.nivel)}</td><td><small style="color:var(--tinta-2)">${esc(d.prio.motivos.join(' · '))}</small></td></tr>`).join('')}</tbody></table>
     ${primeros.length > 15 ? `<button class="btn" type="button" data-todos-nac style="margin-top:8px">${UI.nac.todos ? 'Ver solo los 15 primeros' : `Ver los ${num(primeros.length)} distritos`}</button>` : ''}`
     : '<p class="vacio">Ningún distrito suma prioridad media o alta ese día con los datos disponibles. Eso no quiere decir que no haya riesgo.</p>';
-  $('#notaNac').innerHTML = `<strong>Prioridad · criterio nacional</strong> (de VIGÍA, no oficial): suma aviso de lluvia o de quebradas del SENAMHI ese día (amarillo 1, naranja 2, rojo 3), emergencia del COEN-INDECI en 30 días (2, y 1 más si menciona víctimas) y río con crecida pronosticada por GloFAS cuyo punto de control cae en el distrito (1, o 2 si es de 5 años o más). Alta: 4 o más · media: 2 o 3. No incluye población expuesta, que solo existe para el norte: por eso un distrito del norte puede tener otra prioridad en la sección de abajo. Cruce de VIGÍA, no oficial, entre los límites del INEI y los avisos oficiales: un distrito cuenta como «con aviso» si su centro cae dentro de la zona del aviso de lluvia del SENAMHI para ese día; las quebradas se asignan por nombre de distrito y las emergencias por su UBIGEO. «Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. Toca una tarjeta para ver esos distritos en el mapa y un departamento para ir a él.`;
+  $('#notaNac').innerHTML = `<strong>Prioridad · criterio nacional</strong> (de VIGÍA, no oficial): suma aviso de lluvia o de quebradas del SENAMHI ese día (amarillo 1, naranja 2, rojo 3), emergencia del COEN-INDECI en 30 días (2, y 1 más si menciona víctimas) y río con crecida pronosticada por GloFAS cuyo punto de control cae en el distrito (1, o 2 si es de 5 años o más). Alta: 4 o más · media: 2 o 3. No incluye población expuesta, que solo existe para el norte: por eso un distrito del norte puede tener otra prioridad en la sección de abajo. Cruce de VIGÍA, no oficial, entre los límites del INEI y los avisos oficiales: un distrito cuenta como «con aviso» si su centro cae dentro de la zona del aviso de lluvia del SENAMHI para ese día; las quebradas se asignan por nombre de distrito y las emergencias por su UBIGEO. Los rayos son del sensor GLM del satélite GOES-19 (NOAA) en los 60 minutos previos a la última actualización; no suman a la prioridad, porque son una observación del momento y no un aviso, y el sensor no detecta todos los rayos. «Sin aviso» quiere decir que el SENAMHI no emitió aviso para ese lugar, no que no haya riesgo. Toca una tarjeta para ver esos distritos en el mapa y un departamento para ir a él.`;
   pintarFiltroNacional(encuadrar);
 }
 
@@ -2333,7 +2357,7 @@ function bloquePrioNac(id) {
   const R = resumenNacional(UI.ops.dia || diasOps()[0]), d = R?.dist.get(id);
   if (!d) return '';
   const pr = d.prio;
-  return `<h3>Prioridad de atención · criterio nacional · ${nombreDia(R.dia).toLowerCase()}</h3><div class="kpis"><div class="kpi nivel" style="--c:var(--${NIVEL_PRIO[pr.nivel]?.c || 'tinta-3'})"><small>Prioridad</small><b>${pr.nivel ? NIVEL_PRIO[pr.nivel].n : 'baja'}</b><span>${esc(pr.motivos.join(' · ') || 'Sin aviso, emergencia ni crecida con los datos disponibles. No quiere decir que no haya riesgo')}</span></div></div>`;
+  return `<h3>Prioridad de atención · criterio nacional · ${nombreDia(R.dia).toLowerCase()}</h3><div class="kpis"><div class="kpi nivel" style="--c:var(--${NIVEL_PRIO[pr.nivel]?.c || 'tinta-3'})"><small>Prioridad</small><b>${pr.nivel ? NIVEL_PRIO[pr.nivel].n : 'baja'}</b><span>${esc(pr.motivos.join(' · ') || 'Sin aviso, emergencia ni crecida con los datos disponibles. No quiere decir que no haya riesgo')}</span></div>${DATA.rayos ? `<div class="kpi"><small>Rayos · ${ventanaRayos(DATA.rayos)}</small><b>${num(d.rayos)}</b><span>${d.rayos ? 'Tormenta eléctrica en el distrito' : 'Ninguno detectado'} · GOES-19 (NOAA)</span></div>` : ''}</div>`;
 }
 const LLUVIA_CMP = new Map(); // UBIGEO → [[fecha, mm]…] de ECMWF vía Open-Meteo, en el centro del lugar
 async function lluviaComparar(xs) {
@@ -2839,7 +2863,7 @@ async function pintarLugar() {
   let clima = L.ref, avisoClima = '';
   if (D) { clima = { n: L.n, dias: (D.lluvia || []).map(x => [x[0], null, null, null, x[1], null]) }; avisoClima = 'Lluvia en el centro del distrito.'; }
   else if (!clima && L.cercano) { clima = L.cercano.lugar; avisoClima = `Pronóstico de ${L.cercano.lugar.n}, a ${num(L.cercano.km)} km.`; }
-  const rio = RIOS_ENFEN[L.ref?.n], cu = cuencaEn(L.lat, L.lng), emg = D ? emergDistrito(D) : [];
+  const rio = DATA.enfen?.automatico ? null : RIOS_ENFEN[L.ref?.n], cu = cuencaEn(L.lat, L.lng), emg = D ? emergDistrito(D) : [];
   const html = `
     <div><h2>${esc(L.n)}</h2><p class="meta">${D ? `Distrito · ${esc(titulo(D.prov))}, ${esc(titulo(D.dep))} · UBIGEO ${D.id} · ` : L.meta ? esc(L.meta) + ' · ' : ''}${coord(L.lat, L.lng)} · ${hora(ahora, tz)} hora local${tz === 'UTC' ? ' (UTC)' : ''} · ${deNoche ? 'de noche' : 'de día'}</p></div>
     ${L.nota ? `<p class="nota">${esc(L.nota)}</p>` : ''}
@@ -3465,6 +3489,12 @@ async function iniciarMapa() {
   fuente('rios'); map.addLayer({ id: 'rios', type: 'line', source: 'rios', layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': ['match', ['get', 'n'], 2, '#FF3B3B', 1, '#FF9F1C', '#5BC0FF'], 'line-width': ['match', ['get', 'n'], 2, 3.6, 1, 2.8, 2.2] } });
   fuente('sel'); map.addLayer({ id: 'sel', type: 'line', source: 'sel', paint: { 'line-color': COL.sodio, 'line-width': 3 } });
+  // rayos del GLM: una celda de 5 km por grupo de destellos; más grande si hubo más, más clara si fue reciente
+  fuente('rayos', fc((DATA.rayos?.celdas || []).map(([lng, lat, n, e]) => punto(lng, lat, { n, e }))));
+  map.addLayer({ id: 'rayos', type: 'circle', source: 'rayos', layout: { 'circle-sort-key': ['-', 60, ['get', 'e']] },
+    paint: { 'circle-color': ['step', ['get', 'e'], '#FFFFFF', 10, COL.tormenta, 30, COL['tinta-3']], 'circle-opacity': 0.9,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, ['+', 1.5, ['*', 0.6, ['sqrt', ['get', 'n']]]], 9, ['+', 3, ['*', 1.4, ['sqrt', ['get', 'n']]]]],
+      'circle-stroke-color': '#03060D', 'circle-stroke-width': 0.6 } });
   // puntos: cada capa es un GeoJSON con t (tipo), i (índice), g (glifo), c (color), s (tamaño en px)
   const PUNTOS = { ciudades: [], quebradas: [], ccpp: [], eess: [], iiee: [], emergencias: [], riosEc: [], mundo: [] };
   const AGRUPAR = { quebradas: 1, ccpp: 1, emergencias: 1 }; // capas densas: se agrupan al alejarse
@@ -3719,7 +3749,7 @@ async function iniciarMapa() {
   const CAPAS_MAPA = {
     ciudades: ['p-ciudades'], nino: ['nino-f', 'nino-l'], rios: ['rios', 'rios-sel-r', 'rios-sel-c', 'p-riosEc'], mundo: ['p-mundo'],
     avisos: ['avisos-f', 'avisos-l', 'p-quebradas', 'p-quebradas-grupo'], distritos: ['zona-f', 'zona-l'], expuestos: ['p-ccpp', 'p-ccpp-grupo', 'p-eess', 'p-iiee'],
-    emergencias: ['p-emergencias', 'p-emergencias-grupo'], termica: ['termica'], imagen: ['ref'],
+    emergencias: ['p-emergencias', 'p-emergencias-grupo'], termica: ['termica'], imagen: ['ref'], rayos: ['rayos'],
   };
   function aplicarCapas() {
     for (const [k, ids] of Object.entries(CAPAS_MAPA)) for (const id of ids) ver(id, UI.capas[k] && (k !== 'termica' || termicaLista));
@@ -3730,7 +3760,7 @@ async function iniciarMapa() {
   }
   const OPACIDAD = { distritos: [['zona-f', 'fill-opacity-mult']], avisos: [['avisos-f', 'fill-opacity']], lluvia: [['lluvia', 'raster-opacity']], termica: [['termica', 'raster-opacity']],
     imagen: [['ref', 'raster-opacity']], nino: [['nino-f', 'fill-opacity']], expuestos: [['p-ccpp', 'icon-opacity'], ['p-eess', 'icon-opacity'], ['p-iiee', 'icon-opacity']],
-    emergencias: [['p-emergencias', 'icon-opacity']], rios: [['rios', 'line-opacity']], ciudades: [['p-ciudades', 'icon-opacity']], mundo: [['p-mundo', 'icon-opacity']] };
+    emergencias: [['p-emergencias', 'icon-opacity']], rios: [['rios', 'line-opacity']], ciudades: [['p-ciudades', 'icon-opacity']], mundo: [['p-mundo', 'icon-opacity']], rayos: [['rayos', 'circle-opacity']] };
   function opacidad(k, o) {
     for (const [id, prop] of OPACIDAD[k] || []) {
       if (!map.getLayer(id)) continue;
@@ -4811,7 +4841,8 @@ function resumenParaClaude() {
   L.push('Actualización de cada fuente: ' + FUENTES.map(f => `${f.n.split(' ·')[0]} ${fechaHora(FRESCO[f.k].t)}`).join('; ') + '.');
   const u = DATA.nino[DATA.nino.length - 1], o = DATA.oni[DATA.oni.length - 1];
   if (u) L.push(`\nEL NIÑO (NOAA, semana del ${u[0]}): anomalías Niño 1+2 ${u[2]} °C (mar a ${u[1]} °C), Niño 3 ${u[4]}, Niño 3.4 ${u[6]}, Niño 4 ${u[8]}. Últimas 8 semanas Niño 1+2: ${DATA.nino.slice(-8).map(r => r[2]).join(', ')}. ONI ${o?.[0]} ${o?.[1]}: ${o?.[3]}.`);
-  if (DATA.enfen) L.push(`ENFEN, Comunicado Oficial ${DATA.enfen.numero} (${DATA.enfen.fecha}): ${DATA.enfen.estado}. ${DATA.enfen.titular}. ${DATA.enfen.puntos.join(' ')} Próximo comunicado: ${DATA.enfen.proximo}.`);
+  if (DATA.enfen) L.push(`ENFEN, Comunicado Oficial ${DATA.enfen.numero} (${DATA.enfen.fecha}): ${DATA.enfen.estado}. ${DATA.enfen.titular}. ${DATA.enfen.puntos.join(' ')}${DATA.enfen.automatico ? ' (Solo estado y titular leídos del PDF; el detalle está en el comunicado.)' : ''} Próximo comunicado: ${DATA.enfen.proximo || 'sin fecha'}.`);
+  if (DATA.rayos) { const rd = rayosPorDistrito(), top = rd ? [...rd].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, n]) => `${titulo(TERR.distritos.find(x => x[0] === id)?.[1] || id)} ${n}`) : []; L.push(`RAYOS (GOES-19 GLM, ${ventanaRayos(DATA.rayos)} hora de Lima): ${DATA.rayos.total} destellos sobre el Perú${top.length ? '; distritos con más: ' + top.join(', ') : ''}.`); }
   if (ALERTAS.length) L.push('\nALERTAS AUTOMÁTICAS DE VIGÍA (criterio propio, no oficial): ' + ALERTAS.map(a => `${NIVEL_ALERTA[a.n].n}: ${a.titulo} (${a.det})`).join('; ') + '.');
   if (DATA.mm) { const s0 = mmAhora(); L.push('LLUVIA EN 48 H SEGÚN 7 MODELOS (mediana / 2.º más lluvioso, mm): ' + LOCALIDADES.map(l => { const r = lluviaLocal(l[1], l[2], s0, s0 + 15); return r ? `${l[0]} ${num(r.probable)}/${num(r.pesimista)}` : null; }).filter(Boolean).join(', ') + '.'); }
   const costa = ['Tumbes', 'Piura', 'Sullana', 'Chiclayo', 'Trujillo', 'Cajamarca'].map(n => DATA.clima.find(c => c.n === n)).filter(Boolean);

@@ -222,13 +222,70 @@ def clima_lugares():
     return out
 
 
+MESES_ES = {m: i for i, m in enumerate(["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                                         "septiembre", "octubre", "noviembre", "diciembre"], 1)}
+MESES_ES["setiembre"] = 9
+
+
+def fecha_es(s):
+    """«30 octubre 2026», «30 de octubre de 2026» o «30 Octubre, 2026» -> 2026-10-30 (None si no se entiende)."""
+    m = re.search(r"(\d{1,2})\s+(?:de\s+)?([a-záéíóú]+),?\s+(?:de\s+|del\s+)?(\d{4})", s or "", re.I)
+    if not m or m.group(2).lower() not in MESES_ES:
+        return None
+    return f"{m.group(3)}-{MESES_ES[m.group(2).lower()]:02d}-{int(m.group(1)):02d}"
+
+
+def leer_comunicado_enfen(pdf):
+    """Del PDF del comunicado oficial: número, fecha, estado del sistema de alerta, titular y fecha del próximo.
+    Solo lo que se puede leer sin interpretar; el resumen en puntos se escribe a mano (ENFEN_RESUMEN)."""
+    import io
+    from pypdf import PdfReader
+    texto = "\n".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(pdf)).pages)
+    lineas = [l.strip() for l in texto.splitlines() if l.strip()]
+    i = next(k for k, l in enumerate(lineas) if re.match(r"COMUNICADO OFICIAL ENFEN N", l, re.I))
+    numero = re.search(r"(\d+\s*-\s*\d{4})", lineas[i]).group(1).replace(" ", "")
+    fecha = fecha_es(lineas[i + 1])
+    # la línea del estado lleva pegada la llamada a la nota técnica («Alerta de El Niño Costero1»)
+    estado = re.sub(r"^Estado del sistema de alerta:\s*", "", re.sub(r"\d+$", "", lineas[i + 2]).strip(), flags=re.I)
+    if not re.match(r"(Alerta|Vigilancia|No activo)", estado, re.I):
+        raise RuntimeError(f"no se reconoce el estado del comunicado {numero}: {estado!r}")
+    titular = []
+    for l in lineas[i + 3:i + 6]:  # el titular va en mayúsculas, en una o dos líneas; algunos comunicados no lo traen
+        if l.upper() != l or len(l) < 8 or l.upper() == "RESUMEN EJECUTIVO":
+            break
+        titular.append(l)
+    prox = re.search(r"pr[oó]ximo Comunicado Oficial se emitir[aá] el\s+(?:\w+\s+)?(\d{1,2}\s+de\s+\w+\s+del?\s+\d{4})",
+                     re.sub(r"\s+", " ", texto), re.I)
+    return {"numero": numero, "fecha": fecha, "estado": estado, "titular": " ".join(titular),
+            "proximo": fecha_es(prox.group(1)) if prox else None}
+
+
 def enfen_ultimo():
     texto = bajar("https://enfen.imarpe.gob.pe/", texto=True)
     plano = html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", texto)))
     m = re.search(r"Comunicado Oficial Enfen N° (\d+-\d{4})\s+[\d.,]+ [KM]B \| (\d+ \w+, \d{4})", plano, re.I)
     info = dict(ENFEN_RESUMEN)
-    if m:
-        info["ultimo_publicado"] = {"numero": m.group(1), "fecha": m.group(2)}
+    if not m:
+        return info
+    info["ultimo_publicado"] = {"numero": m.group(1), "fecha": m.group(2)}
+    enlace = re.search(r'href="(https://enfen\.imarpe\.gob\.pe/download/comunicado-oficial-enfen-n-' + m.group(1)
+                       + r'/\?wpdmdl=\d+)', texto)
+    if enlace:
+        info["pdf"] = enlace.group(1)
+    if m.group(1) == ENFEN_RESUMEN["numero"] or not enlace:
+        return info
+    # comunicado nuevo: se publica lo que dice el PDF y se retira el resumen en puntos, que es del anterior
+    try:
+        leido = leer_comunicado_enfen(bajar(enlace.group(1), binario=True))
+    except Exception as e:  # noqa: BLE001 - queda el resumen anterior con el aviso de que hay uno nuevo
+        print(f"  enfen      no se pudo leer el PDF del {m.group(1)}: {e}", flush=True)
+        return info
+    info.update({k: v for k, v in leido.items() if v})
+    info.update({"puntos": [], "automatico": True, "resumen_de": ENFEN_RESUMEN["numero"]})
+    if not leido.get("fecha"):
+        info["fecha"] = fecha_es(m.group(2)) or info["fecha"]
+    if not leido.get("proximo"):
+        info.pop("proximo", None)
     return info
 
 
@@ -462,10 +519,6 @@ def avisos_senamhi():
             a["dias"].append({"fecha": fecha, "nivel": max([z["nivel"] for z in zonas], default=1), "zonas": zonas})
     avisos.sort(key=lambda a: (not a["lluvia"], -a["nivel"], a["inicio"]))
     return {"avisos": avisos, "pagina": f"{SENAMHI_WEB}/?p=aviso-meteorologico"}
-
-
-MESES_ES = {m: i for i, m in enumerate(["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
-                                         "septiembre", "octubre", "noviembre", "diciembre"], 1)}
 
 
 def quebradas_senamhi():
@@ -704,6 +757,69 @@ def termica():
             return {"hora": h, "archivo": "datos/termica.jpg", "caja": CAJA_TERMICA}
         t -= dt.timedelta(minutes=10)
     raise RuntimeError("sin imagen térmica reciente con contenido")
+
+
+GLM = "https://noaa-goes19.s3.amazonaws.com"
+CAJA_PERU = (-81.6, -18.6, -68.4, 0.2)
+
+
+def rayos(minutos=60):
+    """Rayos detectados por el GLM (Geostationary Lightning Mapper) del GOES-19 sobre el Perú en la última hora.
+    El GLM publica un archivo cada 20 segundos en el bucket abierto de la NOAA; se usan los destellos con buena
+    calidad (flash_quality_flag 0) dentro del contorno del país."""
+    import io
+    from concurrent.futures import ThreadPoolExecutor
+    import h5py
+    ahora = dt.datetime.now(dt.timezone.utc)
+    desde = ahora - dt.timedelta(minutes=minutos)
+    claves = []
+    for h in sorted({desde.replace(minute=0, second=0, microsecond=0) + dt.timedelta(hours=k) for k in range(minutos // 60 + 2)}):
+        if h > ahora:
+            continue
+        token = ""
+        while True:
+            xml = bajar(f"{GLM}/?list-type=2&prefix=GLM-L2-LCFA/{h:%Y/%j/%H}/" + token, texto=True)
+            for k in re.findall(r"<Key>([^<]+\.nc)</Key>", xml):
+                ini = dt.datetime.strptime(re.search(r"_s(\d{13})", k).group(1), "%Y%j%H%M%S").replace(tzinfo=dt.timezone.utc)
+                if ini >= desde:
+                    claves.append((ini, k))
+            sig = re.search(r"<NextContinuationToken>([^<]+)</NextContinuationToken>", xml)
+            if not sig:
+                break
+            token = "&continuation-token=" + urllib.parse.quote(sig.group(1), safe="")
+    if not claves:
+        raise RuntimeError("el GLM no tiene archivos de la última hora")
+    anillos = [[c for p in a for c in p] for a in anillos_peru()]
+    x0, y0, x1, y1 = CAJA_PERU
+
+    def leer(par):
+        ini, k = par
+        try:
+            f = h5py.File(io.BytesIO(bajar(f"{GLM}/{k}", binario=True, intentos=3)), "r")
+        except Exception:  # noqa: BLE001 - un archivo de 20 s perdido se cuenta aparte
+            return None
+        la, lo, q = f["flash_lat"][:], f["flash_lon"][:], f["flash_quality_flag"][:]
+        m = (q == 0) & (lo > x0) & (lo < x1) & (la > y0) & (la < y1)
+        edad = round((ahora - ini).total_seconds() / 60)
+        return [[round(float(x), 3), round(float(y), 3), edad] for x, y in zip(lo[m], la[m]) if dentro(float(x), float(y), anillos)]
+
+    with ThreadPoolExecutor(8) as pool:
+        partes = list(pool.map(leer, claves))
+    # una tormenta da cientos de destellos: se agrupan en celdas de 0,05° (unos 5 km) con su cantidad y el más reciente
+    celdas = {}
+    for x, y, edad in (p for parte in partes if parte for p in parte):
+        k = (math.floor(x / 0.05), math.floor(y / 0.05))
+        n, e = celdas.get(k, (0, edad))
+        celdas[k] = (n + 1, min(e, edad))
+    return {
+        "desde": min(c[0] for c in claves).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "hasta": (max(c[0] for c in claves) + dt.timedelta(seconds=20)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "archivos": len(claves), "perdidos": sum(1 for p in partes if p is None),
+        "total": sum(n for n, _ in celdas.values()),
+        # [lng, lat del centro de la celda, destellos, minutos desde el más reciente hasta la hora de la corrida]
+        "celdas": sorted(([round((i + 0.5) * 0.05, 3), round((j + 0.5) * 0.05, 3), n, e] for (i, j), (n, e) in celdas.items()), key=lambda c: c[3]),
+        "fuente": "NOAA GOES-19 GLM L2 (noaa-goes19 en AWS)",
+    }
 
 
 # ---------- cuencas, ríos y caudales del norte ----------
@@ -1295,7 +1411,7 @@ def main():
         "clima": clima_lugares, "enfen": enfen_ultimo,
         "ecmwf": lluvia_ecmwf, "imerg": lluvia_satelite, "avisos": avisos_senamhi,
         "quebradas": quebradas_senamhi, "conjunto": probabilidad_lluvia,
-        "zona": zona_norte, "aerodromos": aerodromos, "termica": termica,
+        "zona": zona_norte, "aerodromos": aerodromos, "termica": termica, "rayos": rayos,
         "emergencias": emergencias_indeci, "cuencas": cuencas_norte, "imagen_zona": imagen_zona,
         "multimodelo": multimodelo, "rios_ec": rios_ecuador, "ensamble": ensamble_rios, "mundo": mundo_gdacs, "oceano": oceano,
         "rios_pe": rios_peru,
