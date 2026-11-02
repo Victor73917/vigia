@@ -561,6 +561,10 @@ button.aero:hover{border-color:var(--filo-2)}
   .panel{top:auto;left:0;width:auto;height:88%;border-left:0;border-top:1px solid var(--filo-2);border-radius:18px 18px 0 0;transform:translateY(calc(100% - var(--asomo)));transition:transform .32s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:0}
   .panel[data-estado="media"]{transform:translateY(45%)}
   .panel[data-estado="llena"]{transform:translateY(0)}
+  /* con la hoja a media altura, los botones del mapa suben sobre ella; con la hoja llena no hay mapa a la vista */
+  #app:has(.panel[data-estado="media"]) .btn-asesor{bottom:calc(48.4% + 10px)}
+  #app:has(.panel[data-estado="media"]) .nav-mapa{bottom:calc(48.4% + 56px)}
+  #app:has(.panel[data-estado="llena"]) .btn-asesor,#app:has(.panel[data-estado="llena"]) .nav-mapa{display:none}
   .panel.arrastrando{transition:none}
   .asa{display:block;flex:none;height:22px;cursor:grab;touch-action:none;position:relative;border:0;background:transparent;width:100%}
   .asa::before{content:"";position:absolute;left:50%;top:9px;width:42px;height:4px;border-radius:4px;background:var(--filo-2);transform:translateX(-50%)}
