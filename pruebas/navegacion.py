@@ -45,7 +45,13 @@ CAJA_JS = """o => { if (o.caja) return o.caja; const a = [180, 90, -180, -90];
 
 
 def esperar_mapa(pagina):
-    pagina.wait_for_function("window.VIGIA_PRUEBA && VIGIA_PRUEBA.G", timeout=90_000)
+    # sin wait_for_function: evalúa el texto con eval, que la política de seguridad de la página (CSP) bloquea
+    for _ in range(180):
+        if pagina.evaluate("!!(window.VIGIA_PRUEBA && VIGIA_PRUEBA.G)"):
+            break
+        pagina.wait_for_timeout(500)
+    else:
+        raise TimeoutError("el mapa no cargó en 90 s")
     pagina.evaluate("VIGIA_PRUEBA.cargarTerritorio()")
     pagina.wait_for_timeout(3500)
 
@@ -57,6 +63,8 @@ def main():
         pagina = nav.new_page(viewport={"width": 1366, "height": 800})
         errores = []
         pagina.on("pageerror", lambda e: errores.append(str(e)))
+        # algo bloqueado por la política de seguridad (CSP): una fuente nueva que falta en construir.py
+        pagina.on("console", lambda m: errores.append(m.text[:200]) if m.type == "error" and "Content Security Policy" in m.text else None)
         pagina.goto(URL + "?prueba", wait_until="domcontentloaded")
         esperar_mapa(pagina)
         motor = pagina.evaluate("document.querySelector('#mapa') && !document.querySelector('#mapa').hidden ? 'MapLibre' : 'globo'")
