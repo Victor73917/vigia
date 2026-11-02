@@ -19,7 +19,6 @@ ni digas que no hay riesgo por falta de datos. Si la pregunta no trata de esos t
 Si alguien está en peligro, recuerda los números 105 (Policía), 116 (Bomberos), 106 (SAMU) y 115 (Defensa Civil).
 Esta es una página de pruebas: aclara que no reemplaza los avisos oficiales.`;
 
-const anthropic = new Anthropic(); // lee ANTHROPIC_API_KEY
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 function cabeceras(origen: string | null): HeadersInit {
@@ -39,6 +38,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cabeceras(origen) });
   if (req.method !== "POST") return responder({ error: "metodo" }, 405, origen);
   if (origen && !ORIGENES.includes(origen)) return responder({ error: "origen" }, 403, origen);
+  if (!Deno.env.get("ANTHROPIC_API_KEY")) return responder({ error: "clave" }, 503, origen); // falta el secreto
 
   let mensajes: Anthropic.MessageParam[];
   try {
@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
   ];
 
   try {
+    const anthropic = new Anthropic(); // lee ANTHROPIC_API_KEY
     const r = await anthropic.messages.create({
       model: MODELO,
       max_tokens: 2000,
