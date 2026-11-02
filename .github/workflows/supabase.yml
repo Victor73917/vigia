@@ -1,0 +1,67 @@
+# Base de datos del centro de comando (proyecto Supabase de PRUEBAS, solo datos ficticios).
+# Se corre a mano desde la pestaña Actions («Run workflow») y elige qué hacer:
+#   esquema     crea o actualiza las tablas, las reglas por fila y la bitácora (nube/supabase/001_esquema.sql)
+#   ficticios   borra y vuelve a cargar los datos ficticios (nube/supabase/002_ficticios.sql)
+#   supervisor  da el rol de supervisor, con todo el país, al usuario de Auth con el correo indicado
+# Cada lunes hace una consulta mínima para que Supabase no pause el proyecto gratuito por inactividad.
+# Usa el secreto SUPABASE_DB_URL: la cadena del «Session pooler» del proyecto (GitHub no llega a la conexión directa).
+name: Base de datos del centro de comando (pruebas)
+
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: "Qué hacer"
+        type: choice
+        options: [esquema, ficticios, supervisor]
+        default: esquema
+      correo:
+        description: "Correo del usuario (solo para «supervisor»)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "23 12 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase
+  cancel-in-progress: false
+
+jobs:
+  sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PGURL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Comprobar el secreto
+        run: |
+          if [ -z "$PGURL" ]; then echo "Falta el secreto SUPABASE_DB_URL"; exit 1; fi
+
+      - name: Mantener activo el proyecto
+        if: github.event_name == 'schedule'
+        run: psql "$PGURL" -v ON_ERROR_STOP=1 -tAc "select count(*) from public.incidencias" || psql "$PGURL" -tAc "select 1"
+
+      - name: Esquema
+        if: github.event_name == 'workflow_dispatch' && inputs.accion == 'esquema'
+        run: psql "$PGURL" -v ON_ERROR_STOP=1 -f nube/supabase/001_esquema.sql
+
+      - name: Datos ficticios
+        if: github.event_name == 'workflow_dispatch' && inputs.accion == 'ficticios'
+        run: psql "$PGURL" -v ON_ERROR_STOP=1 -f nube/supabase/002_ficticios.sql
+
+      - name: Supervisor
+        if: github.event_name == 'workflow_dispatch' && inputs.accion == 'supervisor'
+        env:
+          CORREO: ${{ inputs.correo }}
+        run: |
+          psql "$PGURL" -v ON_ERROR_STOP=1 -v correo="$CORREO" <<'SQL'
+          update public.perfiles set rol = 'supervisor', departamentos = '{}' where correo = lower(trim(:'correo'));
+          select case when count(*) = 1 then 'Listo: supervisor asignado'
+                      else 'No hay ningún usuario de Auth con ese correo' end
+            from public.perfiles where correo = lower(trim(:'correo')) and rol = 'supervisor';
+          SQL
