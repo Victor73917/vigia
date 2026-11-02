@@ -1,6 +1,6 @@
 # Base de datos del centro de comando (proyecto Supabase de PRUEBAS, solo datos ficticios).
 # Se corre a mano desde la pestaña Actions («Run workflow») y elige qué hacer:
-#   esquema     crea o actualiza las tablas, las reglas por fila y la bitácora (001_esquema.sql) y los reportes ciudadanos (003_reportes.sql)
+#   esquema     crea o actualiza las tablas, las reglas por fila y la bitácora (001_esquema.sql) los reportes ciudadanos (003_reportes.sql) y el tope del analista (004_analista.sql)
 #   ficticios   borra y vuelve a cargar los datos ficticios (nube/supabase/002_ficticios.sql)
 #   supervisor  da el rol de supervisor, con todo el país, al usuario de Auth con el correo indicado
 # Cada lunes hace una consulta mínima para que Supabase no pause el proyecto gratuito por inactividad.
@@ -51,6 +51,7 @@ jobs:
         run: |
           psql "$PGURL" -v ON_ERROR_STOP=1 -f nube/supabase/001_esquema.sql
           psql "$PGURL" -v ON_ERROR_STOP=1 -f nube/supabase/003_reportes.sql
+          psql "$PGURL" -v ON_ERROR_STOP=1 -f nube/supabase/004_analista.sql
 
       - name: Datos ficticios
         if: github.event_name == 'workflow_dispatch' && inputs.accion == 'ficticios'

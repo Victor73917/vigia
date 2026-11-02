@@ -4906,15 +4906,17 @@ function md(texto) {
 async function iniciarAnalista() {
   const cuerpo = $('#analistaCuerpo');
   const sinClaude = msg => { cuerpo.innerHTML = `<p class="vacio">${msg}</p>`; };
-  if (!EN_CLAUDE) { if (UI.vista === 'analista') abrirVista('ops', { desplegar: false }); $('#t-analista').hidden = true; VISTAS.splice(VISTAS.indexOf('analista'), 1); return; }
+  const enNube = !EN_CLAUDE && !!window.VIGIA_NUBE;
+  if (!EN_CLAUDE && !enNube) { if (UI.vista === 'analista') abrirVista('ops', { desplegar: false }); $('#t-analista').hidden = true; VISTAS.splice(VISTAS.indexOf('analista'), 1); return; }
   cuerpo.innerHTML = '<p class="vacio">Conectando con Claude…</p>';
   let sample = null;
-  try { sample = await window.claude.use('sample'); } catch { sample = null; }
+  if (enNube) sample = analistaNube();
+  else try { sample = await window.claude.use('sample'); } catch { sample = null; }
   if (!sample) return sinClaude('El analista no está disponible en esta vista. El resto del monitor funciona igual.');
   const lim = await sample.limits().catch(() => null);
   const conHerr = !!lim?.tools;
   cuerpo.innerHTML = `
-    <p class="nota">Claude responde con los datos que ves aquí y, si hace falta, consulta el detalle con herramientas de la página. Cada consulta usa tu cuenta de Claude; la primera vez te pedirá permiso.</p>
+    <p class="nota">${enNube ? `Responde Claude Haiku 5.5 con los datos que ves en esta página. Entorno de pruebas: hay un máximo de preguntas al día para todo el sitio y las respuestas no reemplazan los avisos oficiales. No escribas datos personales.` : 'Claude responde con los datos que ves aquí y, si hace falta, consulta el detalle con herramientas de la página. Cada consulta usa tu cuenta de Claude; la primera vez te pedirá permiso.'}</p>
     <div class="fila" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn prim" id="btnInforme" type="button">Redactar informe de situación</button></div>
     <div class="sugerencias" id="sugerencias">
       <button type="button">¿Qué distritos tienen prioridad alta de atención y por qué?</button>
@@ -4980,7 +4982,7 @@ async function iniciarAnalista() {
       inputSchema: { type: 'object', properties: { lat: { type: 'number' }, lng: { type: 'number' } }, required: ['lat', 'lng'] },
       execute: i => { const la = Number(i.lat), lo = Number(i.lng); if (!isFinite(la) || !isFinite(lo)) throw new Error('lat/lng inválidos'); G?.irA(clamp(la, -85, 85), lo, 400); return 'ok'; } },
   ] : undefined;
-  const ERR = { not_granted: 'No diste permiso para usar Claude en esta página.', sampling_disabled: 'Claude no está disponible para esta cuenta.', rate_limited: 'Llegaste al límite de consultas por ahora. Prueba en un rato.', session_expired: 'Tu sesión de Claude venció; vuelve a iniciar sesión.', refused: 'Claude no respondió a esta pregunta. Prueba a formularla de otra forma.', prompt_too_large: 'La consulta es demasiado larga.', upstream_error: 'Se cortó la conexión con Claude. Inténtalo de nuevo.' };
+  const ERR = { cupo: 'Se acabaron las preguntas de hoy para todo el sitio (entorno de pruebas). Vuelve mañana.', no_disponible: 'El analista no está disponible en este momento. El resto del monitor funciona igual.', not_granted: 'No diste permiso para usar Claude en esta página.', sampling_disabled: 'Claude no está disponible para esta cuenta.', rate_limited: 'Llegaste al límite de consultas por ahora. Prueba en un rato.', session_expired: 'Tu sesión de Claude venció; vuelve a iniciar sesión.', refused: 'Claude no respondió a esta pregunta. Prueba a formularla de otra forma.', prompt_too_large: 'La consulta es demasiado larga.', upstream_error: 'Se cortó la conexión con Claude. Inténtalo de nuevo.' };
   async function preguntar(texto) {
     if (!texto.trim() || ctl) return;
     const u = document.createElement('div'); u.className = 'msj usuario'; u.textContent = texto; chat.append(u);
@@ -4997,6 +4999,7 @@ async function iniciarAnalista() {
       const res = await sample(entrada, { ...opciones, onText: ({ text }) => { r.innerHTML = (herrUsadas.length ? `<span class="herr">Consultó: ${[...new Set(herrUsadas)].map(n => n.replace('_', ' ')).join(', ')}</span>` : '') + md(text); } });
       turnos.push({ role: 'assistant', content: res.text });
       if (res.truncated) r.insertAdjacentHTML('beforeend', '<p class="nota">La respuesta se cortó; pide algo más acotado.</p>');
+      if (res.quedan != null) r.insertAdjacentHTML('beforeend', `<p class="nota">Quedan ${res.quedan} preguntas hoy para todo el sitio.</p>`);
     } catch (e) {
       turnos.pop();
       if (e?.code === 'cancelled') { if (!e.text) r.innerHTML = '<span class="pensando">Detenido.</span>'; }
@@ -5012,6 +5015,21 @@ async function iniciarAnalista() {
   $('#btnDetener').onclick = () => ctl?.abort();
   $('#btnInforme').onclick = () => preguntar('Redacta un informe de situación breve, estilo COEN/INDECI, sobre El Niño Costero en la zona norte, con estas partes: "## El Niño Costero" (estado oficial del ENFEN y el mar), "## Lluvias y avisos" (SENAMHI), "## Ríos" (caudales de GloFAS frente a su historia), "## Emergencias reportadas" (COEN-INDECI; víctimas solo si el reporte las cita), "## Dónde atender primero" (prioridad de VIGÍA) y "## Qué vigilar en los próximos días". Cita la fuente de cada dato.');
   $('#sugerencias').onclick = e => { const b = e.target.closest('button'); if (b) preguntar(b.textContent); };
+}
+
+// Analista en la web de pruebas: la función «analista» de Supabase llama a Claude con la clave guardada allí como secreto.
+// Misma forma que sample() de Claude: recibe los mensajes y devuelve { text }; sin herramientas ni respuesta en vivo.
+function analistaNube() {
+  const url = window.VIGIA_NUBE.url + '/functions/v1/analista', clave = window.VIGIA_NUBE.anon;
+  return async (mensajes, { signal, onText } = {}) => {
+    let r;
+    try {
+      r = await fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json', apikey: clave, Authorization: 'Bearer ' + clave }, body: JSON.stringify({ mensajes }) });
+    } catch (e) { throw Object.assign(new Error('red'), { code: e?.name === 'AbortError' ? 'cancelled' : 'upstream_error' }); }
+    const d = await r.json().catch(() => ({}));
+    if (d.texto) { onText?.({ text: d.texto }); return { text: d.texto, truncated: !!d.cortada, quedan: d.quedan }; }
+    throw Object.assign(new Error(d.error || 'error'), { code: { cupo: 'cupo', rechazo: 'refused', entrada: 'prompt_too_large', limite_anthropic: 'rate_limited', clave: 'no_disponible', saldo: 'no_disponible' }[d.error] || 'upstream_error' });
+  };
 }
 
 /* ---------------- arranque ---------------- */
@@ -5032,7 +5050,7 @@ function arrancar() {
   relojes(); setInterval(relojes, 1000);
   pintarAlertas(); pintarMundo(); addEventListener('resize', acomodarCapas);
   // el analista solo funciona dentro de Claude: en la web se quita la pestaña
-  if (!EN_CLAUDE) { $('#t-analista').hidden = true; TEMAS.splice(TEMAS.findIndex(t => t.h.includes('analista')), 1); }
+  if (!EN_CLAUDE && !window.VIGIA_NUBE) { $('#t-analista').hidden = true; TEMAS.splice(TEMAS.findIndex(t => t.h.includes('analista')), 1); }
   // ?lugar=UBIGEO abre ese territorio en vez de la vista inicial
   const ubigeoUrl = new URLSearchParams(location.search).get('lugar');
   const territorioUrl = ubigeoUrl && indiceConsulta().find(e => TERRITORIO[e.tipo] && e.obj.id === ubigeoUrl);
