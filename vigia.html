@@ -4913,7 +4913,7 @@ async function iniciarAnalista() {
   if (enNube) sample = analistaNube();
   else try { sample = await window.claude.use('sample'); } catch { sample = null; }
   if (!sample) return sinClaude('El analista no está disponible en esta vista. El resto del monitor funciona igual.');
-  const lim = await sample.limits().catch(() => null);
+  const lim = enNube ? null : await sample.limits().catch(() => null); // la función de Supabase no tiene herramientas
   const conHerr = !!lim?.tools;
   cuerpo.innerHTML = `
     <p class="nota">${enNube ? `Responde Claude Haiku 5.5 con los datos que ves en esta página. Entorno de pruebas: hay un máximo de preguntas al día para todo el sitio y las respuestas no reemplazan los avisos oficiales. No escribas datos personales.` : 'Claude responde con los datos que ves aquí y, si hace falta, consulta el detalle con herramientas de la página. Cada consulta usa tu cuenta de Claude; la primera vez te pedirá permiso.'}</p>
