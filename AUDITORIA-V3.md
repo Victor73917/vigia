@@ -354,7 +354,13 @@ Por eso se cambió al método del río con nombre.
   - Los indicadores coinciden con los datos cargados: 8 abiertas, 2 en atención, 7 de 11 recursos disponibles y 2 misiones en curso de 3.
   - Se ven las secciones de recursos, usuarios y bitácora.
 
+**Escritura con la sesión del supervisor** (prueba del 2 de noviembre):
+- Se creó la incidencia «[FICTICIO] Prueba de Claude: huaico de ensayo», ubicada con un toque en el mapa. El distrito, Codo del Pozuzo (Huánuco), lo puso la página.
+- En Catacaos se creó una misión con el camión cisterna: la incidencia pasó a «en atención» y el camión a «asignado».
+- Al marcar la misión como cumplida, el camión volvió a «disponible».
+- La bitácora registró cada paso con el correo y la hora, y los indicadores se actualizaron solos.
+- La incidencia sigue «en atención» tras cerrar la misión: cerrarla es una decisión del operador.
+
 **Pendiente:**
-- Probar con la sesión del supervisor la escritura: crear una incidencia y una misión, cerrarla y cambiar un rol.
-- Probar un usuario operador con departamentos limitados.
+- Probar el cambio de rol y un usuario operador con departamentos limitados.
 - Para poner el sistema en servicio hacen falta el titular de los datos (Ley 29733), la autorización de la institución, un proyecto en São Paulo y el plan Pro (copias de seguridad).
