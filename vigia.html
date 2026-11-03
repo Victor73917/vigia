@@ -745,6 +745,38 @@ input,textarea{caret-color:var(--sodio)}
   .relojes{display:none}
   .consulta{min-width:200px}
 }
+
+/* ---------- guía de uso ---------- */
+.guia{width:min(640px,calc(100% - 32px));max-height:min(86vh,780px);padding:0;border:1px solid var(--filo-2);border-radius:16px;background:var(--noche);color:var(--tinta);
+  box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden;flex-direction:column;opacity:1;scale:1;transition:opacity .2s var(--ease-out),scale .2s var(--ease-out),display .2s allow-discrete,overlay .2s allow-discrete}
+.guia[open]{display:flex}
+@starting-style{.guia[open]{opacity:0;scale:.97}}
+.guia::backdrop{background:rgba(3,6,13,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.guia header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 12px;border-bottom:1px solid var(--filo)}
+.guia h2{margin:0;font-family:var(--f-titulo);font-size:28px;font-weight:700;line-height:1}
+.guia .cerrar{width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--tinta-2);font-size:20px;line-height:1}
+.guia .cerrar:hover{background:var(--filo)}
+.guia-cuerpo{overflow-y:auto;padding:14px 20px 8px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.5}
+.guia-cuerpo p{margin:0}
+.guia-intro{color:var(--tinta-2);max-width:62ch}
+.guia-intro strong{color:var(--tinta)}
+.guia h3{margin:10px 0 0;font-family:var(--f-texto);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-2)}
+.guia-colores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;color:var(--tinta-2)}
+.guia-colores li{display:grid;grid-template-columns:100px 1fr;gap:10px;align-items:baseline}
+.guia-colores .nivel-chip,.guia-sin{font-size:13px;font-weight:600;color:var(--tinta)}
+.guia-rayado{display:inline-block;width:14px;height:9px;margin-right:6px;border-radius:2px;vertical-align:0;background:repeating-linear-gradient(135deg,var(--tinta-2) 0 1px,transparent 1px 4px)}
+.guia-lista{display:grid;grid-template-columns:132px 1fr;gap:8px 14px;margin:0}
+.guia-lista dt{font-weight:600}
+.guia-lista dd{margin:0;color:var(--tinta-2)}
+.guia footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-top:1px solid var(--filo)}
+.guia footer label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tinta-2)}
+.guia footer .btn{padding:8px 18px;font-size:14px}
+@media (max-width:520px){
+  .guia{width:calc(100% - 16px);max-height:92vh}
+  .guia-lista{grid-template-columns:1fr;gap:2px}
+  .guia-lista dd{margin-bottom:8px}
+}
+@media (prefers-reduced-motion:reduce){@starting-style{.guia[open]{scale:1}}}
 </style>
 
 <div id="app">
@@ -774,6 +806,7 @@ input,textarea{caret-color:var(--sodio)}
       <div><small>Lima</small><span id="horaLima">--:--</span></div>
       <div><small>UTC</small><span id="horaUtc">--:--</span></div>
     </div>
+    <button class="btn-tema" id="btnGuia" type="button" aria-haspopup="dialog" title="Cómo usar VIGÍA"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg><span class="visualmente-oculto">Guía de uso</span></button>
     <button class="btn-tema" id="btnTema" type="button" aria-pressed="false" title="Cambiar a modo claro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span class="visualmente-oculto">Modo claro</span></button>
     <button class="chip-datos" id="chipDatos" type="button" title="Ver de dónde salen los datos"><i></i><span id="chipTexto">Datos</span></button>
     <button class="campana" id="btnAvisos" type="button" aria-expanded="false" aria-controls="alertas" title="Alertas automáticas de VIGÍA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="cuenta" id="cuentaAvisos"></span><span class="visualmente-oculto">Alertas</span></button>
@@ -785,6 +818,41 @@ input,textarea{caret-color:var(--sodio)}
   </aside>
 
   <nav class="capas" id="capas" aria-label="Capas del globo"></nav>
+  <dialog class="guia" id="guia" aria-labelledby="guiaTitulo">
+    <header><h2 id="guiaTitulo">Cómo usar VIGÍA</h2><button type="button" class="cerrar" data-cerrar-guia aria-label="Cerrar la guía">×</button></header>
+    <div class="guia-cuerpo">
+      <p class="guia-intro">VIGÍA reúne en un solo mapa lo que publican el SENAMHI, el COEN-INDECI, el ENFEN, la NOAA y los modelos de lluvia y de caudal de los ríos, para decidir <strong>dónde mirar primero</strong> ante El Niño costero. Es un apoyo para las operaciones: <strong>no reemplaza los avisos oficiales</strong>.</p>
+      <h3>Cómo leer los colores</h3>
+      <ul class="guia-colores">
+        <li><span class="nivel-chip" style="--c:var(--rojo)">Rojo</span> peligro alto: aviso rojo, alerta o reportes con víctimas.</li>
+        <li><span class="nivel-chip" style="--c:var(--naranja)">Naranja</span> peligro importante: prepararse.</li>
+        <li><span class="nivel-chip" style="--c:var(--amarillo)">Amarillo</span> vigilar la evolución.</li>
+        <li><span class="guia-sin"><span class="guia-rayado" aria-hidden="true"></span>Rayado</span> sin datos suficientes. Nunca significa «sin riesgo».</li>
+      </ul>
+      <p class="nota">Cada dato dice de dónde viene y cuándo se actualizó; si está viejo, la fecha aparece en naranja.</p>
+      <h3>Las pestañas</h3>
+      <dl class="guia-lista">
+        <dt>Prioridad</dt><dd>Situación nacional de hoy y de los próximos días: departamentos con aviso y los distritos que conviene mirar primero (criterio de VIGÍA, no oficial).</dd>
+        <dt>Emergencias</dt><dd>Reportes del COEN-INDECI de los últimos 30 días por departamento, con enlace al reporte oficial.</dd>
+        <dt>Ríos</dt><dd>Caudal pronosticado por cuenca (GloFAS), su nivel y la probabilidad de crecida en los próximos 10 días.</dd>
+        <dt>Lluvia</dt><dd>Avisos oficiales del SENAMHI, activación de quebradas (huaicos) y la lluvia pronosticada para 3 días.</dd>
+        <dt>El Niño</dt><dd>Estado oficial del ENFEN, temperatura del mar frente al Perú comparada con los grandes Niños e índice ONI.</dd>
+        <dt>Lugar</dt><dd>Ficha de un distrito, provincia o departamento: búscalo o tócalo en el mapa.</dd>
+        <dt>Comparar</dt><dd>Hasta 4 lugares lado a lado con las mismas fuentes.</dd>
+      </dl>
+      <h3>En el mapa</h3>
+      <dl class="guia-lista">
+        <dt>Buscador</dt><dd>Escribe un lugar o una consulta: «río Piura», «emergencias Tumbes».</dd>
+        <dt>Barra de alertas</dt><dd>Alertas automáticas de VIGÍA. Deslízala a un lado o toca × para ver el mapa; la campana la vuelve a mostrar.</dd>
+        <dt>Capas del globo</dt><dd>Enciende o apaga cada capa; «Mapa base y opacidad» cambia el fondo y la transparencia.</dd>
+        <dt>Línea de tiempo</dt><dd>Los últimos 30 días y los días con aviso; toca un día para verlo en el mapa.</dd>
+        <dt>Escenarios 72 h</dt><dd>Animación de la lluvia de 7 modelos y del estado de los ríos para las próximas 72 horas.</dd>
+        <dt>Modo de trabajo</dt><dd>Vigilancia (todo), Respuesta (avisos, emergencias, ríos y población expuesta) o Análisis climático (El Niño y lluvia).</dd>
+        <dt>Asesor</dt><dd>El botón «?» responde dudas sobre cómo usar la página.</dd>
+      </dl>
+    </div>
+    <footer><label><input type="checkbox" id="guiaNoMostrar" checked> No mostrar al abrir</label><button type="button" class="btn prim" data-cerrar-guia>Empezar</button></footer>
+  </dialog>
   <section class="gestor" id="gestor" role="dialog" aria-labelledby="tituloGestor" hidden>
     <header><b id="tituloGestor">Capas y mapa base</b><button type="button" id="cerrarGestor" aria-label="Cerrar">×</button></header>
     <div id="cuerpoGestor"></div>
@@ -3270,7 +3338,8 @@ function pintarAlertas() {
 function acomodarCapas() {
   const c = $('#capas'), a = $('#alertas');
   if (esMovil()) { c.style.top = c.style.maxHeight = ''; return; }
-  const arriba = a.offsetTop + a.offsetHeight + 10, r = $('#repro').getBoundingClientRect();
+  const bajoBarra = $('.barra').getBoundingClientRect().bottom + 14, r = $('#repro').getBoundingClientRect();
+  const arriba = a.offsetHeight ? Math.max(bajoBarra, a.offsetTop + a.offsetHeight + 10) : bajoBarra;
   c.style.top = `${arriba}px`;
   // la lista no baja hasta los botones del mapa: si no cabe, se desplaza; si casi no hay sitio, se pliega
   const alto = (r.height ? r.top : innerHeight) - 12 - c.getBoundingClientRect().top;
@@ -3278,6 +3347,17 @@ function acomodarCapas() {
   if (c.dataset.plegado !== 'true' && alto < 140) { c.dataset.plegado = 'true'; pintarCapas(); }
 }
 addEventListener('resize', () => acomodarCapas());
+// guía de uso: se abre sola la primera vez; el botón «i» de la barra la vuelve a abrir
+{
+  const guia = $('#guia');
+  const abrirGuia = () => { if (!guia.open) guia.showModal(); };
+  guia.addEventListener('click', e => { if (e.target.closest('[data-cerrar-guia]') || e.target === guia) guia.close(); });
+  guia.addEventListener('close', () => { try { localStorage.setItem('vigia-guia', $('#guiaNoMostrar').checked ? 'vista' : 'mostrar'); } catch { /* sin almacenamiento */ } });
+  $('#btnGuia').onclick = abrirGuia;
+  let estado = null;
+  try { estado = localStorage.getItem('vigia-guia'); } catch { /* sin almacenamiento */ }
+  if (estado !== 'vista' && !new URLSearchParams(location.search).has('prueba')) setTimeout(abrirGuia, 600);
+}
 function avisarNuevas() {
   let previas = null;
   try { previas = JSON.parse(localStorage.getItem('vigia-alertas') || 'null'); } catch { /* sin almacenamiento */ }
