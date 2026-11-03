@@ -31,4 +31,8 @@ Salida de la skill **taste**, medida sobre https://victor73917.github.io/vigia (
 
 **El nivel se marca con borde y fondo teñidos, no con una franja lateral gruesa.** Una tarjeta roja es roja entera (`color-mix` al 45 % en el borde y 8 % en el fondo); en listas, un punto de 8 px. *Compromiso:* la franja se leía de reojo más rápido en listas largas; el punto y el teñido conservan esa lectura sin el recurso gastado.
 
+**Ningún texto lleva una caja detrás.** Los estados (nivel, víctimas, estado del río, departamento, probabilidad) son un punto de 8 px del color del nivel y el texto en tinta neutra, con mayúscula inicial; los rótulos del mapa llevan un contorno fino del color del fondo en lugar de sombra. Las capas del globo son un solo panel con filas, no una pila de cajitas. *Compromiso:* un recuadro relleno salta más a la vista; el punto de color conserva el código sin ruido y se lee igual en tema claro.
+
+**Sin abreviaturas.** «víctimas», no «víct.»; «con aviso», no «dep. con aviso». Si no cabe, se acorta la frase, no la palabra.
+
 **Cada toque responde y nada demora.** Los botones se hunden 3 % al tocarlos; los paneles entran desde donde se abrieron en ≤ 250 ms y los avisos se apilan en vez de taparse. Sin animaciones de carga ni coreografías: con "reducir movimiento" solo queda el fundido.

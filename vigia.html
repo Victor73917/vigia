@@ -251,7 +251,8 @@ button.kpi:hover{border-color:var(--filo-2)}
 .consulta form:focus-within{border-color:var(--sodio)}
 .consulta svg{width:16px;height:16px;fill:none;stroke:var(--tinta-2);stroke-width:2;flex:none}
 .consulta input{flex:1;min-width:0;background:transparent;border:0;outline:none;font-size:15px;padding:6px 0}
-.consulta input::placeholder{color:var(--tinta-3)}
+.consulta input{text-overflow:ellipsis}
+.consulta input::placeholder{color:var(--tinta-3);text-overflow:ellipsis}
 .consulta button[type=submit]{border:0;border-radius:8px;background:var(--sodio);color:#1A1205;font-weight:600;font-size:13px;padding:7px 12px}
 .respuesta{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:30;background:var(--vidrio-2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--filo-2);border-radius:14px;padding:14px 16px;box-shadow:0 24px 60px rgba(0,0,0,.55);max-height:min(70vh,560px);overflow-y:auto}
 .respuesta .cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
@@ -698,6 +699,52 @@ input,textarea{caret-color:var(--sodio)}
   @starting-style{.respuesta,.ficha,.gestor,.recientes,.asesor,.aviso-toast,.franja{translate:none;scale:none}}
   :is(.btn,.capa,.kpi[data-filtro],.atencion button,.alertas li button):active{scale:none}
 }
+
+/* ---------- estados sin recuadro: un punto del color del nivel y el texto limpio al lado ---------- */
+/* el punto es un fondo (no ::before) para que ::first-letter ponga la mayúscula */
+.nivel-chip,.estado-rio,.victima,.pill,.cat,.prob,.anom,.chip-visible{--p:var(--c,var(--tinta-3));display:inline-block;border:0;border-radius:0;padding:0 0 0 13px;
+  background:radial-gradient(circle,var(--p) 3.2px,transparent 3.8px) no-repeat 0 50%/8px 8px;
+  font-family:var(--f-texto);font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--tinta);white-space:nowrap;line-height:1.3}
+.nivel-chip::first-letter,.estado-rio::first-letter,.victima::first-letter,.pill::first-letter{text-transform:uppercase}
+.prob,.anom{--p:var(--bg);font-family:var(--f-dato);font-weight:500}
+.victima{--p:var(--rojo);color:var(--rojo)}
+.chip-visible{--p:var(--sodio);color:var(--sodio)}
+.nivel-chip.sin,.victima.sin{color:var(--tinta-3);font-weight:400;border:0;
+  background:radial-gradient(circle,transparent 2.4px,var(--tinta-3) 2.9px,var(--tinta-3) 3.5px,transparent 4px) no-repeat 0 50%/8px 8px}
+/* línea de tiempo: la cantidad de emergencias en su color, sin barra detrás del número */
+.tiempo .col>i.em{color:var(--naranja);font-weight:700}
+.tiempo .col>i.em.grave{color:var(--rojo)}
+.tiempo .col>i.em::before{display:none}
+/* rótulos del mapa: contorno fino del color del fondo en vez de una sombra que se ve como mancha */
+.etq{font-family:var(--f-texto);font-weight:600;letter-spacing:.01em}
+.etq.nino{background:none;border:0;padding:0;color:#FFD9C7}
+@supports (paint-order:stroke){
+  .etq{text-shadow:none;-webkit-text-stroke:3px rgba(3,6,13,.8);paint-order:stroke fill}
+}
+/* barra de alertas: la línea de fuentes en una sola línea */
+.alertas .cab>div{min-width:0;flex:1}
+.alertas .cab small.meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (min-width:900px){
+  /* capas del globo: un solo panel con filas, no una pila de cajitas */
+  .capas{gap:0;padding:4px;background:var(--vidrio-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--filo-2);border-radius:14px;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+  .capas::-webkit-scrollbar{display:none}
+  .capas .capa{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;border-radius:9px;padding:6px 8px}
+  .capas .capa:hover{background:var(--filo)}
+  .capas-plegar,.capa-ajustes{width:100%;border:0;background:transparent;backdrop-filter:none;border-radius:9px;padding:8px;font-size:13px;text-align:left}
+  .capas-plegar{font-weight:600;color:var(--tinta)}
+  .capas-plegar:hover,.capa-ajustes:hover{background:var(--filo)}
+  .capas-plegar span{display:inline-block;font-size:0;width:8px;height:8px;border-right:1.5px solid var(--tinta-2);border-bottom:1.5px solid var(--tinta-2);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s var(--ease-out)}
+  .capas-plegar[aria-expanded="true"] span{transform:rotate(225deg) translate(-2px,-2px)}
+  .capa-ajustes{display:block;color:var(--tinta-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .capas:not([data-plegado="true"]) .capa-ajustes{margin-top:4px;border-top:1px solid var(--filo);border-radius:0 0 9px 9px}
+  .grupo-capa{padding:10px 8px 4px}
+}
+@media (min-width:900px) and (max-width:1199px){
+  /* sin los relojes, el buscador conserva su ancho */
+  .relojes{display:none}
+  .consulta{min-width:200px}
+}
 </style>
 
 <div id="app">
@@ -1118,7 +1165,7 @@ function pintarCapas() {
   $('#capas').innerHTML = `<button class="capas-plegar" type="button" data-plegar aria-expanded="${!plegado}">Capas del globo <span>${plegado ? '+' : '−'}</span></button>` + CAPAS.filter(c => !(c.soloMapa && G && !G.baseActual)).map(c => `${c.g !== grupo ? `<div class="grupo-capa">${esc(grupo = c.g)}</div>` : ''}
     <button class="capa" type="button" data-capa="${c.id}" aria-pressed="${UI.capas[c.id]}" style="--c:var(--${c.c})">
       <i class="pt"></i><span><b>${esc(c.n)}</b><small>${esc(c.id === 'lluvia' ? subLluvia() : c.sub)}</small></span><em>${(n => typeof n === 'number' ? num(n) : esc(n))(contarCapa(c.id))}</em>
-    </button>`).join('') + `<button class="capa-ajustes" type="button" data-gestor aria-haspopup="dialog">Opacidad, fuentes y mapa base…</button>`;
+    </button>`).join('') + `<button class="capa-ajustes" type="button" data-gestor aria-haspopup="dialog" title="Opacidad de cada capa, fuentes y mapa base">Mapa base y opacidad…</button>`;
   if (!$('#gestor').hidden) pintarGestor();
 }
 $('#capas').addEventListener('click', e => {
@@ -1964,7 +2011,7 @@ function pintarNacional({ encuadrar = false } = {}) {
   const filas = [...R.deps].sort((a, b) => ord === 'n' ? a.n.localeCompare(b.n) : val(b) - val(a) || a.n.localeCompare(b.n));
   const th = (k, t, cls = '') => `<th class="${cls}"${ord === k ? ' aria-sort="descending"' : ''}><button type="button" data-orden="${k}">${t}</button></th>`;
   $('#tablaNac').innerHTML = `<table class="tabla tabla-nac"><thead><tr>${th('n', 'Departamento')}${th('aviso', 'Aviso SENAMHI')}${th('conAviso', 'Distritos con aviso', 'num')}${th('quebrada', 'Quebradas', 'num')}${th('emerg', 'Emergencias', 'num')}</tr></thead><tbody>${filas.map(d => `
-    <tr class="clic" data-dep-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${num(d.total)} distritos</small></td><td>${chipNivel(d.aviso)}</td><td class="num">${d.conAviso ? num(d.conAviso) : '–'}</td><td class="num">${qv ? (d.quebrada ? num(d.quebrada) : '–') : '<span title="sin aviso de quebradas vigente">·</span>'}</td><td class="num">${d.emerg ? num(d.emerg) + (d.victimas ? ` <span class="victima">${d.victimas} víct.</span>` : '') : '–'}</td></tr>`).join('')}</tbody></table>`;
+    <tr class="clic" data-dep-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${num(d.total)} distritos</small></td><td>${chipNivel(d.aviso)}</td><td class="num">${d.conAviso ? num(d.conAviso) : '–'}</td><td class="num">${qv ? (d.quebrada ? num(d.quebrada) : '–') : '<span title="sin aviso de quebradas vigente">·</span>'}</td><td class="num">${d.emerg ? num(d.emerg) + (d.victimas ? ` <span class="victima">${d.victimas} ${d.victimas === 1 ? 'víctima' : 'víctimas'}</span>` : '') : '–'}</td></tr>`).join('')}</tbody></table>`;
   const primeros = [...R.dist.values()].filter(d => d.prio.nivel >= 2).sort((a, b) => b.prio.p - a.prio.p || Math.max(b.aviso, b.quebrada) - Math.max(a.aviso, a.quebrada) || b.emerg.length - a.emerg.length || a.n.localeCompare(b.n));
   $('#prioNac').innerHTML = primeros.length ? `<table class="tabla"><thead><tr><th>Distrito</th><th>Prioridad</th><th>Motivos</th></tr></thead><tbody>${primeros.slice(0, UI.nac.todos ? 400 : 15).map(d => `
     <tr class="clic" data-dist-nac="${d.id}"><td><b>${esc(titulo(d.n))}</b><small>${esc(titulo(d.prov || ''))} · ${esc(titulo(d.dep || ''))}</small></td><td>${chipPrio(d.prio.nivel)}</td><td><small style="color:var(--tinta-2)">${esc(d.prio.motivos.join(' · '))}</small></td></tr>`).join('')}</tbody></table>
@@ -1982,7 +2029,7 @@ function pintarOps() {
   const dia = UI.ops.dia, lista = ZD().filter(d => UI.ops.dep === 'todos' || d.dep === UI.ops.dep);
   $('#metaOps').textContent = `${z.departamentos.map(titulo).join(' · ')} · ${ZD().length} distritos · SENAMHI ${haceCuanto(FRESCO.zona.t)} · INDECI ${haceCuanto(FRESCO.emergencias.t)}`;
   // los días van arriba, en la situación nacional: cuentan departamentos con aviso (o, sin el índice del INEI, prioridad del norte)
-  $('#diasOps').innerHTML = diasOps().map(f => { const R = resumenNacional(f), n = R ? R.deps.filter(d => d.conAviso).length : lista.filter(d => prioridad(d, f).nivel === 3).length; return `<button type="button" data-dia="${f}" aria-pressed="${f === dia}">${nombreDia(f)}<small>${R ? `${n} dep. con aviso` : `${n} prioridad alta`}</small></button>`; }).join('');
+  $('#diasOps').innerHTML = diasOps().map(f => { const R = resumenNacional(f), n = R ? R.deps.filter(d => d.conAviso).length : lista.filter(d => prioridad(d, f).nivel === 3).length; return `<button type="button" data-dia="${f}" aria-pressed="${f === dia}">${nombreDia(f)}<small>${R ? `${n} con aviso` : `${n} prioridad alta`}</small></button>`; }).join('');
   $('#depsOps').innerHTML = ['todos', ...z.departamentos].map(k => `<button type="button" data-dep="${k}" aria-pressed="${UI.ops.dep === k}">${k === 'todos' ? 'Toda la zona' : titulo(k)}<small>${k === 'todos' ? ZD().length : ZD().filter(d => d.dep === k).length} distritos</small></button>`).join('');
   $('#kpisPrio').innerHTML = [3, 2, 1].map(k => `<div class="kpi nivel" style="--c:var(--${NIVEL_PRIO[k].c})"><small>Prioridad ${NIVEL_PRIO[k].n}</small><b>${lista.filter(d => prioridad(d, dia).nivel === k).length}</b><span>distritos · ${nombreDia(dia).toLowerCase()}</span></div>`).join('');
   $('#kpisOps').innerHTML = [4, 3, 2].map(k => `<div class="kpi nivel" style="--c:${colorNivel(k)}"><small>Nivel ${NIVEL_AVISO[k].n}</small><b>${lista.filter(d => nivelDistrito(d, dia).total === k).length}</b><span>distritos · ${nombreDia(dia).toLowerCase()}</span></div>`).join('');
@@ -2084,7 +2131,7 @@ function htmlFranja(atras) {
       d.em ? `Emergencias (COEN-INDECI): ${d.em.length}${d.grave ? `, ${d.grave} mencionan víctimas` : ''}` : 'Emergencias: día futuro',
       d.enfen === 'pub' ? `Comunicado ENFEN N° ${DATA.enfen.numero}` : d.enfen === 'prox' ? 'Próximo comunicado del ENFEN' : '',
       accion === 'dia' ? 'Toca para ver ese día en el tablero' : accion === 'emerg' ? 'Toca para ver las emergencias' : ''].filter(Boolean).join(' · ');
-    const dd = +d.f.slice(8), rot = d.f === hoy ? 'hoy' : dd === 1 ? fecha(Date.parse(d.f + 'T12:00:00-05:00')).replace(/\.$/, '') : dd;
+    const dd = +d.f.slice(8), rot = dd; // la columna de hoy ya va resaltada; la fecha completa está en el título
     return `<button type="button" class="col${d.f === hoy ? ' hoy' : ''}${d.f === sel && accion === 'dia' ? ' elegido' : ''}" ${accion ? `data-franja="${accion}" data-f="${d.f}"` : 'aria-disabled="true"'} title="${esc(t)}" aria-label="${esc(t)}">
       <span class="fecha">${rot}</span>${celda(d.lluvia, d.sinLl)}${celda(d.otros, d.sinOt)}${celda(d.queb, d.sinQ)}${d.em ? `<i class="em${d.grave ? ' grave' : ''}" style="--h:${d.em.length ? Math.round(30 + 70 * d.em.length / maxEm) : 0}%">${d.em.length || ''}</i>` : '<i class="futuro"></i>'}${d.enfen ? `<b class="enfen ${d.enfen}"></b>` : ''}</button>`;
   }).join('');
@@ -2106,7 +2153,7 @@ function abrirFranja(si, guardar = true) {
   $('#franja').hidden = !si; document.documentElement.classList.toggle('franja-abierta', si);
   $('#btnFranja').setAttribute('aria-pressed', si);
   if (guardar) try { localStorage.setItem('vigia-franja', si ? '1' : '0'); } catch { /* sin almacenamiento */ }
-  G?.encuadre?.();
+  G?.encuadre?.(); if (typeof acomodarCapas === 'function') requestAnimationFrame(() => acomodarCapas());
 }
 $('#cerrarFranja').onclick = () => abrirFranja(false);
 $('#btnFranja').onclick = () => abrirFranja($('#franja').hidden);
@@ -3214,7 +3261,7 @@ function pintarAlertas() {
   $('#cuentaAvisos').textContent = rojas || ''; $('#btnAvisos').setAttribute('aria-expanded', String(caja.dataset.plegado !== 'true'));
   $('#btnAvisos').title = ALERTAS.length ? `${rojas} alertas y ${resto} en vigilancia (criterio de VIGÍA)` : 'Sin alertas automáticas';
   const pleg = caja.dataset.plegado === 'true', pedir = 'Notification' in window && Notification.permission === 'default' && !EN_CLAUDE;
-  caja.innerHTML = `<div class="cab ${!ALERTAS.length ? 'calma' : rojas ? '' : 'vigila'}"><span class="pulso"></span><div><b>${ALERTAS.length ? `${rojas} alerta${rojas === 1 ? '' : 's'} · ${resto} en vigilancia` : 'Sin alertas automáticas'}</b><br><small class="meta">Ríos (GloFAS), lluvia (7 modelos) y COEN · criterio de VIGÍA</small></div>
+  caja.innerHTML = `<div class="cab ${!ALERTAS.length ? 'calma' : rojas ? '' : 'vigila'}"><span class="pulso"></span><div><b>${ALERTAS.length ? `${rojas} alerta${rojas === 1 ? '' : 's'} · ${resto} en vigilancia` : 'Sin alertas automáticas'}</b><br><small class="meta" title="Ríos (GloFAS), lluvia (7 modelos) y emergencias del COEN · criterio de VIGÍA">Ríos (GloFAS), lluvia (7 modelos) y COEN · criterio de VIGÍA</small></div>
     ${ALERTAS.length ? `<button type="button" data-plegar-alertas>${pleg ? 'Ver' : 'Ocultar'}</button>` : ''}${pedir ? '<button type="button" data-avisarme title="Aviso en este equipo cuando aparezca una alerta nueva">Avisarme</button>' : ''}<button type="button" class="cerrar-alertas" data-ocultar-alertas aria-label="Ocultar la barra de alertas (la campana la vuelve a mostrar)" title="Ocultar (también puedes deslizarla hacia un lado)">×</button></div>
     <ul>${ALERTAS.slice(0, caja.dataset.todas === 'true' ? 40 : 4).map((a, i) => `<li><button type="button" data-alerta="${i}" style="--c:var(--${NIVEL_ALERTA[a.n].c})"><i></i><span><b>${esc(a.titulo)}</b><small>${NIVEL_ALERTA[a.n].n} · ${esc(a.det)}</small></span></button></li>`).join('')}${ALERTAS.length > 4 ? `<li><button type="button" class="mas" data-todas>${caja.dataset.todas === 'true' ? 'Ver solo las 4 primeras' : `Ver todas (${ALERTAS.length})`}</button></li>` : ''}</ul>`;
   aplicarAlertasGlobo(REP.abierto ? REP.fecha : null);
@@ -3222,10 +3269,15 @@ function pintarAlertas() {
 }
 function acomodarCapas() {
   const c = $('#capas'), a = $('#alertas');
-  c.style.top = esMovil() ? '' : `${a.offsetTop + a.offsetHeight + 10}px`;
-  // si las capas no caben sobre el reproductor, se pliegan
-  if (!esMovil() && c.dataset.plegado !== 'true' && c.getBoundingClientRect().bottom > innerHeight - 80) { c.dataset.plegado = 'true'; pintarCapas(); }
+  if (esMovil()) { c.style.top = c.style.maxHeight = ''; return; }
+  const arriba = a.offsetTop + a.offsetHeight + 10, r = $('#repro').getBoundingClientRect();
+  c.style.top = `${arriba}px`;
+  // la lista no baja hasta los botones del mapa: si no cabe, se desplaza; si casi no hay sitio, se pliega
+  const alto = (r.height ? r.top : innerHeight) - 12 - c.getBoundingClientRect().top;
+  c.style.maxHeight = `${Math.max(alto, 44)}px`;
+  if (c.dataset.plegado !== 'true' && alto < 140) { c.dataset.plegado = 'true'; pintarCapas(); }
 }
+addEventListener('resize', () => acomodarCapas());
 function avisarNuevas() {
   let previas = null;
   try { previas = JSON.parse(localStorage.getItem('vigia-alertas') || 'null'); } catch { /* sin almacenamiento */ }
