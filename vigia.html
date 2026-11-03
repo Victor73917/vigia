@@ -409,6 +409,10 @@ button.aero:hover{border-color:var(--filo-2)}
 .alertas li small{display:block;color:var(--tinta-2);font-size:11.5px}
 .alertas li button.mas{display:block;text-align:center;padding:5px 10px;font-size:12px;color:var(--tinta-2)}
 .alertas[data-plegado="true"] ul{display:none}
+.alertas[data-oculta="true"]{display:none}
+.alertas .cab{touch-action:pan-y;transition:transform .2s ease,opacity .2s ease}
+.alertas .cab.arrastrando{transition:none}
+.alertas .cab .cerrar-alertas{margin-left:4px;padding:2px 7px;font-size:15px;line-height:1;color:var(--tinta-2)}
 #app.repro-abierto .ficha{bottom:170px}
 /* reproductor de escenarios */
 .repro{position:absolute;left:var(--gl);right:calc(var(--ancho-panel) + 16px);bottom:calc(26px + var(--franja));z-index:5;display:flex;justify-content:center;pointer-events:none}
@@ -523,6 +527,7 @@ button.aero:hover{border-color:var(--filo-2)}
   :root{--ancho-panel:0px}
   .alertas{top:150px;width:calc(100% - 32px)}
   .alertas ul{max-height:26vh}
+  #app:has(#respuesta:not([hidden])) .alertas{display:none}
   .repro{bottom:calc(var(--asomo) + 10px);left:8px;right:8px}
   .repro .cuando{min-width:0;font-size:15px}
   .repro .resumen{display:none}
@@ -1161,7 +1166,52 @@ function abrirVista(v, { desplegar = true } = {}) {
 $('#cerrarCtx').onclick = () => { abrirContexto(false); UI.lugar = null; G?.marcarDistrito(null); G?.marcarLugar(null); fijarUrl(null); };
 $('#plegarPanel').onclick = () => plegarIzq(true);
 $('#abrirPanel').onclick = () => { plegarIzq(false); $('#t-' + UI.vista)?.focus(); };
-$('#btnAvisos').onclick = () => { const c = $('#alertas'); c.dataset.plegado = String(c.dataset.plegado !== 'true'); pintarAlertas(); };
+// La barra de alertas se puede apartar para ver el mapa: deslizándola hacia un lado o con ×. La campana la vuelve a
+// mostrar. Queda guardado en el navegador; las alertas nuevas igual avisan con el globo de la campana.
+function ocultarAlertas(si, avisar = false) {
+  $('#alertas').dataset.oculta = String(si);
+  try { if (si) localStorage.setItem('vigia-alertas-ocultas', '1'); else localStorage.removeItem('vigia-alertas-ocultas'); } catch { /* sin almacenamiento */ }
+  acomodarCapas();
+  if (si && avisar) avisoToast('Alertas ocultas. Toca la campana para volver a verlas.', 5000, 'info');
+}
+try { if (localStorage.getItem('vigia-alertas-ocultas') === '1') $('#alertas').dataset.oculta = 'true'; } catch { /* sin almacenamiento */ }
+$('#btnAvisos').onclick = () => {
+  const c = $('#alertas');
+  if (c.dataset.oculta === 'true') { ocultarAlertas(false); c.dataset.plegado = 'false'; } else c.dataset.plegado = String(c.dataset.plegado !== 'true');
+  pintarAlertas();
+};
+{
+  let ini = null;
+  const caja = $('#alertas');
+  caja.addEventListener('pointerdown', e => {
+    const cab = e.target.closest('.cab');
+    if (!cab || e.target.closest('button') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    ini = { x: e.clientX, y: e.clientY, cab, id: e.pointerId, mueve: false };
+  });
+  caja.addEventListener('pointermove', e => {
+    if (!ini || e.pointerId !== ini.id) return;
+    const dx = e.clientX - ini.x, dy = e.clientY - ini.y;
+    if (!ini.mueve) {
+      if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return; // un toque o un desplazamiento vertical no la mueven
+      ini.mueve = true; ini.cab.classList.add('arrastrando'); try { ini.cab.setPointerCapture(e.pointerId); } catch { /* sin captura: el arrastre sigue igual */ }
+    }
+    ini.cab.style.transform = `translateX(${dx}px)`;
+    ini.cab.style.opacity = String(1 - Math.min(Math.abs(dx) / 220, 0.75));
+  });
+  const soltar = e => {
+    if (!ini || e.pointerId !== ini.id) return;
+    const { cab, mueve } = ini, dx = e.clientX - ini.x;
+    ini = null;
+    if (!mueve) return;
+    cab.classList.remove('arrastrando');
+    if (e.type === 'pointerup' && Math.abs(dx) > 80) {
+      cab.style.transform = `translateX(${Math.sign(dx) * 120}%)`; cab.style.opacity = '0';
+      setTimeout(() => { cab.style.transform = cab.style.opacity = ''; ocultarAlertas(true, true); }, 200);
+    } else { cab.style.transform = cab.style.opacity = ''; }
+  };
+  caja.addEventListener('pointerup', soltar);
+  caja.addEventListener('pointercancel', soltar);
+}
 addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#contexto').hidden && !e.target.closest?.('input,textarea,select') && $('#respuesta').hidden && $('#gestor').hidden && $('#asesor').hidden) $('#cerrarCtx').click(); });
 addEventListener('resize', () => ubicarLugar());
 for (const ev of ['online', 'offline']) addEventListener(ev, () => pintarChip());
@@ -3132,7 +3182,7 @@ function pintarAlertas() {
   $('#btnAvisos').title = ALERTAS.length ? `${rojas} alertas y ${resto} en vigilancia (criterio de VIGÍA)` : 'Sin alertas automáticas';
   const pleg = caja.dataset.plegado === 'true', pedir = 'Notification' in window && Notification.permission === 'default' && !EN_CLAUDE;
   caja.innerHTML = `<div class="cab ${!ALERTAS.length ? 'calma' : rojas ? '' : 'vigila'}"><span class="pulso"></span><div><b>${ALERTAS.length ? `${rojas} alerta${rojas === 1 ? '' : 's'} · ${resto} en vigilancia` : 'Sin alertas automáticas'}</b><br><small class="meta">Ríos (GloFAS), lluvia (7 modelos) y COEN · criterio de VIGÍA</small></div>
-    ${ALERTAS.length ? `<button type="button" data-plegar-alertas>${pleg ? 'Ver' : 'Ocultar'}</button>` : ''}${pedir ? '<button type="button" data-avisarme title="Aviso en este equipo cuando aparezca una alerta nueva">Avisarme</button>' : ''}</div>
+    ${ALERTAS.length ? `<button type="button" data-plegar-alertas>${pleg ? 'Ver' : 'Ocultar'}</button>` : ''}${pedir ? '<button type="button" data-avisarme title="Aviso en este equipo cuando aparezca una alerta nueva">Avisarme</button>' : ''}<button type="button" class="cerrar-alertas" data-ocultar-alertas aria-label="Ocultar la barra de alertas (la campana la vuelve a mostrar)" title="Ocultar (también puedes deslizarla hacia un lado)">×</button></div>
     <ul>${ALERTAS.slice(0, caja.dataset.todas === 'true' ? 40 : 4).map((a, i) => `<li><button type="button" data-alerta="${i}" style="--c:var(--${NIVEL_ALERTA[a.n].c})"><i></i><span><b>${esc(a.titulo)}</b><small>${NIVEL_ALERTA[a.n].n} · ${esc(a.det)}</small></span></button></li>`).join('')}${ALERTAS.length > 4 ? `<li><button type="button" class="mas" data-todas>${caja.dataset.todas === 'true' ? 'Ver solo las 4 primeras' : `Ver todas (${ALERTAS.length})`}</button></li>` : ''}</ul>`;
   aplicarAlertasGlobo(REP.abierto ? REP.fecha : null);
   pintarRiosEc(); acomodarCapas(); avisarNuevas();
@@ -3160,6 +3210,7 @@ function avisoToast(html, ms = 9000, clase = '') {
 }
 $('#alertas').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-ocultar-alertas')) { ocultarAlertas(true, true); return; }
   if (b.hasAttribute('data-plegar-alertas')) { const c = $('#alertas'); c.dataset.plegado = String(c.dataset.plegado !== 'true'); pintarAlertas(); return; }
   if (b.hasAttribute('data-todas')) { const c = $('#alertas'); c.dataset.todas = String(c.dataset.todas !== 'true'); pintarAlertas(); return; }
   if (b.hasAttribute('data-avisarme')) { Notification.requestPermission().then(() => pintarAlertas()); return; }
