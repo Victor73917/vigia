@@ -841,7 +841,9 @@ def caudal_salida(codigo, candidatos):
     cache_ruta = DATOS / "salidas.json"
     cache = json.loads(cache_ruta.read_text(encoding="utf-8")) if cache_ruta.exists() else {}
     if codigo in cache:
-        return tuple(cache[codigo])
+        # salida_por_cauce comparte este archivo y anota «sin» cuando la cuenca no tiene cauce en GloFAS
+        v = cache[codigo]
+        return tuple(v) if isinstance(v, list) and len(v) == 2 else None
     if not candidatos:
         return None
     paso = max(1, len(candidatos) // 60)
@@ -946,8 +948,9 @@ def rios_ecuador():
 def ensamble_rios():
     """Los 50 escenarios de GloFAS (y el de control) a 10 días en la salida de cada río: con ellos la página calcula
     la probabilidad de pasar la crecida de 2, 5 y 20 años, como GloFAS y Google Flood Hub."""
-    puntos = [(c["codigo"], c["salida"]) for c in (_CACHE.get("cuencas") or {}).get("cuencas", []) if c.get("salida")]
-    puntos += [("EC-" + r["n"], r["salida"]) for r in (_CACHE.get("rios_ec") or [])]
+    punto = lambda p: isinstance(p, (list, tuple)) and len(p) == 2 and all(isinstance(v, (int, float)) for v in p)
+    puntos = [(c["codigo"], c["salida"]) for c in (_CACHE.get("cuencas") or {}).get("cuencas", []) if punto(c.get("salida"))]
+    puntos += [("EC-" + r["n"], r["salida"]) for r in (_CACHE.get("rios_ec") or []) if punto(r.get("salida"))]
     if not puntos:
         return None
     d = bajar(f"{FLOOD}?latitude={','.join(str(x[1][0]) for x in puntos)}&longitude={','.join(str(x[1][1]) for x in puntos)}"
@@ -1179,7 +1182,7 @@ def cuencas_norte():
         try:  # si Open-Meteo frena una cuenca, las demás siguen
             punto = caudal_salida(cuenca["codigo"], candidatos)
             if punto:
-                cuenca["salida"] = punto
+                cuenca["salida"] = list(punto)
                 cuenca["historia"] = historia_caudal(*punto)
                 cuenca["caudal"] = pronostico_caudal(*punto)
             cuenca["lluvia"] = lluvia_cuenca(cuenca["poligonos"])

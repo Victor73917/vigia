@@ -1996,7 +1996,7 @@ function resumenNacional(dia) {
     if (dep) emergDep.set(dep, [...(emergDep.get(dep) || []), e]);
   }
   // ríos con crecida de 2 años o más en 7 días: el distrito donde está su punto de control (norte y resto del país)
-  for (const c of [...DATA.cuencas.filter(c => c.salida), ...DATA.riosPe]) {
+  for (const c of [...DATA.cuencas, ...DATA.riosPe].filter(conPunto)) {
     const e = estadoCuenca(c); if (!e || (e.nivel ?? 0) < 2) continue;
     const t = distritoPeruEn(c.salida[0], c.salida[1]), d = t && dist.get(t[0]);
     if (d && (!d.rio || e.nivel > d.rio.nivel)) d.rio = { c, nivel: e.nivel, e };
@@ -3314,12 +3314,14 @@ function calcularAlertas() {
   return L.sort((x, y) => y.n - x.n);
 }
 let ALERTAS = [];
+// punto de control válido: dos números; «sin» u otro valor se trata como sin datos suficientes
+function conPunto(c) { return Array.isArray(c.salida) && c.salida.length === 2 && c.salida.every(Number.isFinite); }
 function aplicarAlertasGlobo(fecha = null) {
   if (!G) return;
   G.alertasRios(new Map(DATA.cuencas.map((c, i) => [i, nivelCuenca(c, fecha)])));
   // estaciones de río a la salida de cada cuenca (como los puntos de Google Flood Hub), coloreadas por su estado
-  G.riosEc([...DATA.cuencas.filter(c => c.salida && c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), cuenca: c })),
-    ...DATA.riosPe.filter(c => c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), pe: c })),
+  G.riosEc([...DATA.cuencas.filter(c => conPunto(c) && c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), cuenca: c })),
+    ...DATA.riosPe.filter(c => conPunto(c) && c.caudal?.length).map(c => ({ n: c.n, salida: c.salida, nivel: nivelCuenca(c, fecha), pe: c })),
     ...DATA.riosEc.map(r => ({ ...r, nivel: fecha ? tendenciaRio(r, fecha)?.n || 0 : r.nivel }))].filter(r => r.nivel >= 1));
 }
 function pintarAlertas() {
@@ -5014,7 +5016,7 @@ async function actualizarConjunto() {
 }
 async function actualizarCaudales() {
   // GloFAS vía Open-Meteo permite leerse desde el navegador: se renueva cada 3 horas en la versión web
-  const cs = [...DATA.cuencas.filter(c => c.salida), ...DATA.riosEc], todos = [...cs, ...DATA.riosPe];
+  const cs = [...DATA.cuencas, ...DATA.riosEc].filter(conPunto), todos = [...cs, ...DATA.riosPe.filter(conPunto)];
   if (!cs.length || (FRESCO.cuencas?.modo === 'vivo' && Date.now() - FRESCO.cuencas.t < 3 * 3600000)) return false;
   try {
     const k = ['river_discharge', 'river_discharge_median', 'river_discharge_p25', 'river_discharge_p75', 'river_discharge_max'];
