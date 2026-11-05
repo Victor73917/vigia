@@ -40,20 +40,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
       - name: Instalar librerías del recolector
-        run: pip install eccodes numpy pillow pypdf h5py
+        # se arma desde main: mientras main no traiga requirements.txt se instalan sin versión fija
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install eccodes numpy pillow pypdf h5py; fi
 
       # los datos de la corrida anterior: así una corrida parcial conserva las demás fuentes
       - name: Recuperar datos de la corrida anterior
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             datos/instantanea.js
@@ -68,7 +70,7 @@ jobs:
 
       # caché aparte: sumar un archivo a la de arriba cambia su versión y la corrida no encontraría los datos anteriores
       - name: Recuperar las cuencas de todo el Perú
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: datos/unidades.json
           key: unidades-${{ github.run_id }}
@@ -96,7 +98,7 @@ jobs:
 
       - name: Guardar datos para la próxima corrida
         if: always()
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             datos/instantanea.js
@@ -110,7 +112,7 @@ jobs:
 
       - name: Guardar las cuencas de todo el Perú
         if: always() && hashFiles('datos/unidades.json') != ''
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: datos/unidades.json
           key: unidades-${{ github.run_id }}
@@ -158,7 +160,7 @@ jobs:
         run: gh workflow run publicar.yml --repo "${{ github.repository }}" --ref main -f fuentes=nada
 
       - if: github.ref_name == 'main'
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: publicar
 
@@ -166,9 +168,10 @@ jobs:
     needs: recolectar
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - id: despliegue
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

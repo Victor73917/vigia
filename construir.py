@@ -60,7 +60,7 @@ ESQUELETO = (
     f'<script>window.VIGIA_SITIO = "{SITIO}";</script>'
     + (MARCA_PRUEBAS if PRUEBAS else "")
     + (f'<script>window.VIGIA_NUBE = {{ url: "{NUBE_URL}", anon: "{NUBE_ANON}", analista: {"true" if ANALISTA else "false"} }};</script>'
-       '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>'
+       '<script src="lib/supabase-js@2.45.4/supabase.js" defer></script>'
        '<script src="comando.js" defer></script>' if NUBE else "")
     + "</head><body>\n"
     + ('<div class="marca-pruebas" role="note">ENTORNO DE PRUEBAS · no usar para decisiones</div>\n' if PRUEBAS else "")
@@ -74,17 +74,21 @@ CABECERAS = """/*
 /datos/zona-s2.jpg
   Cache-Control: public, max-age=604800
 """
-PUBLICAR = ["index.html", "vista-previa.jpg", "datos/instantanea.js", "datos/fronteras.js", "datos/rios.js",
+PUBLICAR = ["index.html", "legal.html", "vista-previa.jpg", "datos/instantanea.js", "datos/fronteras.js", "datos/rios.js",
             "datos/lluvia-24h.png", "datos/lluvia-48h.png", "datos/lluvia-72h.png", "datos/lluvia-7d.png",
-            "datos/lluvia-imerg.png", "datos/termica.jpg", "datos/territorio.json", "datos/ccpp.json", "tex/tierra-dia.jpg", "tex/tierra-noche.jpg", "tex/agua.jpg"]
+            "datos/lluvia-imerg.png", "datos/termica.jpg", "datos/territorio.json", "datos/ccpp.json", "tex/tierra-dia.jpg", "tex/tierra-noche.jpg", "tex/agua.jpg",
+            # bibliotecas propias (librerias.py): el mapa y el globo de respaldo
+            "lib/maplibre-gl@6.14.0/maplibre-gl.mjs", "lib/maplibre-gl@6.14.0/maplibre-gl-worker.mjs", "lib/maplibre-gl@6.14.0/maplibre-gl.css",
+            "lib/three@0.185.1/three.module.js", "lib/three@0.185.1/three.core.js", "lib/three@0.185.1/OrbitControls.js",
+            "lib/three@0.185.1/LineSegments2.js", "lib/three@0.185.1/LineSegmentsGeometry.js", "lib/three@0.185.1/LineMaterial.js"]
 
 
 if NUBE:
-    PUBLICAR.append("comando.js")
+    PUBLICAR += ["comando.js", "lib/supabase-js@2.45.4/supabase.js"]
 
 
 # Política de seguridad de contenido (fase 9). GitHub Pages no permite cabeceras, así que va como <meta>.
-# Solo se cargan scripts propios, de jsDelivr (MapLibre, three.js, Supabase) y los scripts en línea cuyo hash calcula
+# Solo se cargan scripts propios (MapLibre, three.js y Supabase van en lib/, ver librerias.py) y los scripts en línea cuyo hash calcula
 # este programa; los datos solo se piden a las fuentes que usa VIGÍA. Si se agrega una fuente nueva, va en esta lista.
 FUENTES_EN_VIVO = ("https://api.open-meteo.com https://ensemble-api.open-meteo.com https://flood-api.open-meteo.com "
                    "https://gibs.earthdata.nasa.gov https://www.gdacs.org")
@@ -96,12 +100,12 @@ def politica(html):
                      for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html, re.S)})
     nube = f" {NUBE_URL} wss://{NUBE_URL.split('//', 1)[1]}" if NUBE else ""
     return ("default-src 'self'; "
-            f"script-src 'self' https://cdn.jsdelivr.net {' '.join(hashes)}; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            f"script-src 'self' {' '.join(hashes)}; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com data:; "
             f"img-src 'self' data: blob: {TESELAS}; "
-            f"connect-src 'self' https://cdn.jsdelivr.net {FUENTES_EN_VIVO} {TESELAS}{nube}; "
-            "worker-src 'self' blob: https://cdn.jsdelivr.net; child-src blob:; frame-src 'none'; object-src 'none'; "
+            f"connect-src 'self' {FUENTES_EN_VIVO} {TESELAS}{nube}; "
+            "worker-src 'self' blob:; child-src blob:; frame-src 'none'; object-src 'none'; "
             "base-uri 'self'; form-action 'self'; upgrade-insecure-requests")
 
 

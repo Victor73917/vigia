@@ -54,7 +54,13 @@ No se ejecutaron pruebas intrusivas contra servicios de terceros. Solo se hicier
 
 | ID | Corrección | Archivos | Prueba |
 |---|---|---|---|
-| H-01 | `caudal_salida` devuelve «sin punto» cuando el caché dice «sin». `ensamble_rios` y la página usan solo puntos formados por dos números (`conPunto`), y las cuencas sin punto quedan como «sin datos suficientes» | `recolectar.py`, `vigia.html` | Con la instantánea real de producción en local, las dos consultas a `flood-api` responden 200 (antes, 400), sin errores en la consola. `caudal_salida('0148')` → `None` y `ensamble_rios` pide solo los puntos válidos |
+| H-01 | `caudal_salida` devuelve «sin punto» cuando el caché dice «sin». `ensamble_rios` y la página usan solo puntos formados por dos números (`conPunto`), y las cuencas sin punto quedan como «sin datos suficientes» | `recolectar.py`, `vigia.html` | Con la instantánea real de producción en local, las dos consultas a `flood-api` responden 200 (antes, 400), sin errores en la consola. `caudal_salida('0148')` → `None` y `ensamble_rios` pide solo los puntos válidos. **En producción desde el 5 nov:** las dos consultas responden 200 y la consola no muestra errores |
+| H-04 | El recolector guarda en `registro` el último intento de cada fuente y, si falló, el error resumido, sin direcciones (`error_corto`). La página muestra el tipo de dato (alerta oficial, reporte oficial, observado, estimación por satélite, pronóstico, pronóstico por escenarios, referencia) y marca en naranja «Sin actualizar desde…» si el último intento falló o si pasaron más de 3 h (fuentes horarias) o 12 h (las demás). El aviso de los paneles usa el mismo criterio | `recolectar.py`, `vigia.html` | Local, con un fallo simulado de los avisos del SENAMHI: la lista muestra «Último intento… falló (HTTP Error 502). Se muestra el dato anterior». `error_corto` reemplaza la dirección del puente por «[dirección]» |
+| H-05 | MapLibre 6.14.0, three.js 0.185.1 y supabase-js 2.45.4 se sirven desde `lib/` del propio sitio. `librerias.py` guarda la huella SHA-256 de cada archivo y la comprueba; las huellas coinciden en jsDelivr y en unpkg. jsDelivr salió de `script-src`, `style-src`, `connect-src` y `worker-src` | `librerias.py`, `lib/`, `vigia.html`, `construir.py` | Local: el mapa (MapLibre y su worker) y el globo de respaldo (`?motor=globo`, seis módulos de three.js) cargan desde `lib/` con 200 y sin errores en la consola |
+| H-06, H-07 | `requirements.txt` con versiones fijas. Las acciones de GitHub van fijadas por hash (con la etiqueta en un comentario). El trabajo de publicación tiene un tiempo límite de 15 min; el recolector ya tenía 90 | `requirements.txt`, `.github/workflows/*.yml` | Hashes leídos de la API de GitHub para cada etiqueta. Mientras `main` no tenga `requirements.txt`, la instalación usa la lista sin versión, para no romper las corridas |
+| H-08 | Borrador de aviso legal, política de privacidad y términos de uso en `legal.html`, enlazado desde el pie de la pestaña Prioridad. Describe solo lo que el sitio hace (sin cookies, 10 claves de `localStorage`, servicios de terceros). Los datos del responsable quedan **[pendiente]** | `legal.html`, `vigia.html`, `construir.py` | Local: abre sin errores. La página tiene su propia CSP sin scripts |
+| H-11 | Los tres archivos de datos se cargan con `defer`: la página se dibuja mientras bajan, y siguen corriendo en orden antes del módulo. El territorio ya se pedía después de la carga. **No se redujo el peso:** cargar los ríos más tarde cambiaría la prioridad de atención mientras llegan, y eso no conviene en una herramienta de emergencia | `vigia.html` | Local: el mapa y las listas se arman igual, sin errores |
+| H-12 | El nombre «VIGÍA» de la barra es ahora el `<h1>` de la página, con el mismo aspecto | `vigia.html` | Local: `document.querySelector('h1')` → «VIGÍA» |
 
 ## 4. Plan priorizado
 
@@ -84,16 +90,16 @@ No se ejecutaron pruebas intrusivas contra servicios de terceros. Solo se hicier
 
 | Problema | Evidencia | Criticidad | Solución | Archivo | Prueba | Estado |
 |---|---|---|---|---|---|---|
-| H-01 caudales y escenarios rotos | 400 en `flood-api` | Alta | Validar el punto de control | `recolectar.py`, `vigia.html` | Local con datos de producción: 200 | Corregido en desarrollo |
+| H-01 caudales y escenarios rotos | 400 en `flood-api` | Alta | Validar el punto de control | `recolectar.py`, `vigia.html` | Producción: 200, sin errores | **En producción** (escenarios: esperan la corrida completa) |
 | H-02 Netlify desactualizado | Datos del 31/10 | Alta | Redirección (D-01) | — | — | Espera decisión |
 | H-03 horario irregular | 9 h sin corridas, runner caído | Alta | Disparador en el Worker (D-02) y tiempo límite | `publicar.yml`, `nube/puente-peru.js` | — | Espera token |
-| H-04 fuente caída invisible | Sin registro de errores | Media | Estado por fuente | `recolectar.py`, `vigia.html` | — | Pendiente |
-| H-05 sin SRI | 0 `integrity` | Media | Bibliotecas propias | `construir.py`, `vigia.html` | — | Pendiente |
-| H-06 Python sin versión fija | `pip install` libre | Media | `requirements.txt` | `publicar.yml` | — | Pendiente |
-| H-07 acciones por etiqueta | `@v7` | Baja | Fijar hash | `.github/workflows/*` | — | Pendiente |
-| H-08 sin documentos legales | No existen | Media | Borradores | nuevos `.html` | — | Pendiente |
+| H-04 fuente caída invisible | Sin registro de errores | Media | Registro por fuente y tipo de dato | `recolectar.py`, `vigia.html` | Fallo simulado en local | Corregido en desarrollo |
+| H-05 sin SRI | 0 `integrity` | Media | Bibliotecas propias con huella | `librerias.py`, `lib/`, `construir.py`, `vigia.html` | Mapa y globo desde `lib/`, 200 | Corregido en desarrollo |
+| H-06 Python sin versión fija | `pip install` libre | Media | `requirements.txt` | `publicar.yml` | Corrida de `desarrollo` | Corregido en desarrollo |
+| H-07 acciones por etiqueta | `@v7` | Baja | Fijar hash | `.github/workflows/*` | Corrida de `desarrollo` | Corregido en desarrollo |
+| H-08 sin documentos legales | No existen | Media | Borradores | `legal.html` | Abre sin errores | Borrador; faltan los datos del responsable |
 | H-09 3 roles | Esquema | Media | 5 roles (D-04) | `nube/supabase/` | — | Espera decisión |
 | H-10 sesión y límites de acceso | No verificable | — | Revisión en el panel | — | — | Espera decisión |
-| H-11 carga inicial pesada | 1,6 MB comprimidos | Media | Carga diferida | `vigia.html` | — | Pendiente |
-| H-12 sin `<h1>` | DOM | Baja | Agregarlo | `vigia.html` | — | Pendiente |
+| H-11 carga inicial pesada | 1,6 MB comprimidos | Media | `defer` en los datos | `vigia.html` | Local | Mejora parcial: el peso sigue igual |
+| H-12 sin `<h1>` | DOM | Baja | Agregarlo | `vigia.html` | Local | Corregido en desarrollo |
 | H-13 METAR solo con proxy | Código | Baja | Proxy en el Worker (opcional) | `nube/puente-peru.js` | — | Pendiente |

@@ -1400,6 +1400,13 @@ def fusionar_peru(viejo):
             print(f"  {clave:10s} desde la PC ({v['estado']})", flush=True)
 
 
+def error_corto(e):
+    """Error legible para la página: sin direcciones (pueden llevar el puente o parámetros) y en una línea."""
+    texto = re.sub(r"https?://\S+", "[dirección]", str(e))
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return (texto or type(e).__name__)[:140]
+
+
 def main():
     """Sin argumentos baja todas las fuentes; con nombres (p. ej. «cuencas emergencias») solo esas y conserva el resto.
     Con --peru además escribe datos/peru.json con las fuentes que solo responden desde el Perú."""
@@ -1430,6 +1437,8 @@ def main():
     if not modo_peru:
         fusionar_peru(viejo)
     saltar = set(os.environ.get("VIGIA_SALTAR", "").split())
+    # registro por fuente: último intento y, si falló, el error resumido (sin direcciones: pueden llevar el puente)
+    registro = dict(viejo.get("registro") or {})
     for clave, fn in fuentes.items():
         if not solo and clave in saltar:  # corrida completa en GitHub: estas fuentes llegan desde la PC
             if clave in viejo:
@@ -1447,15 +1456,18 @@ def main():
         try:
             datos[clave] = fn()
             datos["estado"][clave] = datos["generado"]
+            registro[clave] = {"intento": datos["generado"], "error": None}
             n = len(datos[clave]) if isinstance(datos[clave], list) else "ok"
             print(f"  {clave:10s} {n} ({time.time() - t0:.0f} s)", flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"  {clave:10s} FALLÓ en {time.time() - t0:.0f} s: {e}", flush=True)
+            registro[clave] = {"intento": datos["generado"], "error": error_corto(e)}
             if clave in viejo:  # se conserva el dato anterior y su fecha
                 datos[clave] = viejo[clave]
                 datos["estado"][clave] = viejo.get("estado", {}).get(clave)
         if clave in datos:
             _CACHE[clave] = datos[clave]
+    datos["registro"] = {k: v for k, v in registro.items() if k in fuentes}
     if "enfen" in datos:
         ult = datos["enfen"].get("ultimo_publicado", {}).get("numero")
         if ult and ult != ENFEN_RESUMEN["numero"]:

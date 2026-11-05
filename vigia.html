@@ -3,12 +3,7 @@
 <script>try { if (localStorage.getItem('vigia-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch { /* sin almacenamiento */ }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/+esm" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/controls/OrbitControls.js/+esm" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/lines/LineSegments2.js/+esm" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/lines/LineSegmentsGeometry.js/+esm" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/lines/LineMaterial.js/+esm" crossorigin>
+<link rel="modulepreload" href="lib/maplibre-gl@6.14.0/maplibre-gl.mjs">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Consola de El Niño Costero: el norte del Perú a pantalla completa, paneles de vidrio azul tinta,
@@ -69,7 +64,7 @@ a{color:var(--sat);text-underline-offset:2px}
 .ojo::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--sodio)}
 .ojo::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(255,181,71,.35);animation:latido 3.2s ease-out infinite}
 @keyframes latido{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.6);opacity:0}}
-.marca b{font-family:var(--f-titulo);font-weight:700;font-size:28px;letter-spacing:.06em;line-height:1;display:block}
+.marca h1{margin:0;font-family:var(--f-titulo);font-weight:700;font-size:28px;letter-spacing:.06em;line-height:1;display:block}
 .marca small{font-family:var(--f-texto);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-2)}
 .relojes{display:flex;gap:16px;margin-left:auto}
 .relojes div{display:flex;flex-direction:column;align-items:flex-end}
@@ -244,6 +239,9 @@ button.kpi:hover{border-color:var(--filo-2)}
 .fuentes small{grid-column:1/-1;color:var(--tinta-3);font-size:12px}
 .fuentes .modo{font-family:var(--f-dato);font-size:11px;color:var(--tinta-2);white-space:nowrap;text-align:right}
 .fuentes .modo.vivo{color:var(--verde)}
+.fuentes .modo.viejo{color:var(--naranja)}
+.fuentes .tipo-dato{color:var(--tinta-2);font-weight:600}
+.fuentes small.fallo{color:var(--naranja)}
 
 /* ---------- barra de consultas ---------- */
 .consulta{position:relative;flex:1;max-width:560px;margin-left:12px}
@@ -541,7 +539,7 @@ button.aero:hover{border-color:var(--filo-2)}
   .btn-asesor em{display:none}
   .asesor{right:8px;left:8px;width:auto;bottom:calc(var(--asomo) + 10px);max-height:62vh}
   .barra{right:var(--gr);gap:10px;padding-top:10px}
-  .marca b{font-size:22px}
+  .marca h1{font-size:22px}
   .marca small{display:none}
   .ojo{width:22px;height:22px}
   .ojo::before{inset:6px}
@@ -791,7 +789,7 @@ input,textarea{caret-color:var(--sodio)}
   <header class="barra">
     <div class="marca">
       <span class="ojo" aria-hidden="true"></span>
-      <div><b>VIGÍA</b><small>El Niño Costero · Zona norte</small></div>
+      <div><h1>VIGÍA</h1><small>El Niño Costero · Zona norte</small></div>
     </div>
     <div class="consulta" id="consulta">
       <form id="formConsulta" role="search" autocomplete="off">
@@ -949,7 +947,7 @@ input,textarea{caret-color:var(--sodio)}
         <h3 id="tituloFuentes">Fuentes y actualización</h3>
         <ul class="fuentes" id="fuentes"></ul>
         <p class="nota" id="notaVivo" hidden>Versión con datos en vivo, para abrir en cualquier celular: <a id="enlaceSitio" href="https://vigia-pe.netlify.app" target="_blank" rel="noopener">vigia-pe.netlify.app</a></p>
-        <p class="nota">VIGÍA reúne datos públicos sobre El Niño Costero y sus efectos. No emite alertas: en el Perú las oficiales son del ENFEN, el SENAMHI, el INDECI y la ANA.</p>
+        <p class="nota">VIGÍA reúne datos públicos sobre El Niño Costero y sus efectos. No emite alertas: en el Perú las oficiales son del ENFEN, el SENAMHI, el INDECI y la ANA. <a href="legal.html">Aviso legal, privacidad y términos de uso</a>.</p>
       </section>
 
       <section class="vista" id="p-emergencias" role="tabpanel" aria-labelledby="t-emergencias" hidden>
@@ -1041,17 +1039,21 @@ input,textarea{caret-color:var(--sodio)}
   <div id="tip" role="tooltip" hidden></div>
 </div>
 
-<script src="datos/instantanea.js"></script>
-<script src="datos/fronteras.js"></script>
-<script src="datos/rios.js"></script>
+<!-- defer: la página se dibuja mientras bajan los datos; corren en este orden y antes del módulo -->
+<script src="datos/instantanea.js" defer></script>
+<script src="datos/fronteras.js" defer></script>
+<script src="datos/rios.js" defer></script>
 <script type="module">
 /* ====================================================================
    VIGÍA · El Niño Costero en el norte del Perú
    ==================================================================== */
-const URL_THREE = 'https://cdn.jsdelivr.net/npm/three@0.185.1/+esm';
-const URL_ORBIT = 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/controls/OrbitControls.js/+esm';
+// bibliotecas servidas desde el propio sitio (lib/, ver librerias.py): una CDN alterada no puede cambiarlas.
+// Dentro de Claude (sin carpeta lib/) se usa jsDelivr con la misma versión.
+const LIB = location.protocol === 'https:' || location.protocol === 'http:' ? new URL('lib/', location.href).href : null;
+const URL_THREE = LIB ? LIB + 'three@0.185.1/three.module.js' : 'https://cdn.jsdelivr.net/npm/three@0.185.1/+esm';
+const URL_ORBIT = LIB ? LIB + 'three@0.185.1/OrbitControls.js' : 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/controls/OrbitControls.js/+esm';
 const URL_TEX_CDN = 'https://cdn.jsdelivr.net/npm/three-globe@2.45.6/example/img/';
-const URL_LINEAS = n => `https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/lines/${n}.js/+esm`;
+const URL_LINEAS = n => LIB ? `${LIB}three@0.185.1/${n}.js` : `https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/lines/${n}.js/+esm`;
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1105,7 +1107,19 @@ const DATA = {
   riosPe: S.rios_pe?.rios || [], riosPeMeta: S.rios_pe || null, rayos: S.rayos || null,
 };
 const FRESCO = {};
-for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano', 'rios_pe', 'rayos']) FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
+for (const k of ['oni', 'nino', 'clima', 'enfen', 'ecmwf', 'imerg', 'avisos', 'quebradas', 'conjunto', 'zona', 'aerodromos', 'termica', 'emergencias', 'cuencas', 'imagen_zona', 'multimodelo', 'rios_ec', 'ensamble', 'mundo', 'oceano', 'rios_pe', 'rayos']) {
+  const rg = (S.registro || {})[k], intento = Date.parse(rg?.intento || 0) || 0;
+  FRESCO[k] = { t: Date.parse((S.estado || {})[k] || S.generado || 0) || GEN, modo: 'instantanea' };
+  // el último intento falló: se muestra el dato anterior, con su fecha, y se avisa
+  if (rg?.error && intento > FRESCO[k].t) Object.assign(FRESCO[k], { fallo: intento, error: rg.error });
+}
+// cada cuánto se renueva cada fuente: pasado ese margen se marca «sin actualizar»
+const CADA_HORA = new Set(['emergencias', 'aerodromos', 'termica', 'imerg', 'mundo', 'avisos', 'quebradas', 'enfen', 'rios_pe', 'rayos']);
+const SIN_RENOVAR = new Set(['imagen_zona']);
+function atrasada(k) {
+  const fr = FRESCO[k]; if (!fr || SIN_RENOVAR.has(k) || fr.modo === 'vivo') return false;
+  return !!fr.fallo || Date.now() - fr.t > (CADA_HORA.has(k) ? 3 : 12) * 3600e3;
+}
 
 const WMO = { 0: 'Despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Niebla', 48: 'Niebla con escarcha', 51: 'Llovizna débil', 53: 'Llovizna', 55: 'Llovizna intensa', 56: 'Llovizna helada', 57: 'Llovizna helada intensa', 61: 'Lluvia débil', 63: 'Lluvia moderada', 65: 'Lluvia fuerte', 66: 'Lluvia helada', 67: 'Lluvia helada fuerte', 71: 'Nieve débil', 73: 'Nieve', 75: 'Nieve fuerte', 77: 'Granizo fino', 80: 'Chubascos débiles', 81: 'Chubascos', 82: 'Chubascos fuertes', 85: 'Chubascos de nieve', 86: 'Chubascos de nieve fuertes', 95: 'Tormenta eléctrica', 96: 'Tormenta con granizo', 99: 'Tormenta con granizo fuerte' };
 // Ríos con caudales sobre lo normal según el Comunicado Oficial ENFEN 19-2026
@@ -1583,31 +1597,33 @@ function verVista(v, dia) { // cambiar de pestaña no mueve la cámara
   }
 }
 const FUENTES = [
-  { k: 'enfen', n: 'ENFEN · Comisión Multisectorial', d: 'Comunicados oficiales sobre El Niño Costero', url: 'https://enfen.imarpe.gob.pe/' },
-  { k: 'nino', n: 'NOAA · Centro de Predicción Climática', d: 'Temperatura semanal del mar en las regiones Niño y el índice ONI', url: 'https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/sstanim.shtml' },
-  { k: 'avisos', n: 'SENAMHI · Avisos meteorológicos', d: 'Avisos oficiales de lluvia del Perú, con sus zonas por día', url: 'https://www.senamhi.gob.pe/?p=aviso-meteorologico' },
-  { k: 'quebradas', n: 'SENAMHI · Activación de quebradas', d: 'Aviso de corto plazo por huaicos, distrito por distrito', url: 'https://www.senamhi.gob.pe/main.php?dp=lima&p=aviso-activacion-quebrada' },
-  { k: 'emergencias', n: 'INDECI · COEN', d: 'Reportes de emergencias por lluvias, inundaciones y huaicos en la zona norte (30 días)', url: 'https://portal.indeci.gob.pe/emergencias/' },
-  { k: 'cuencas', n: 'GloFAS v4 (Copernicus) vía Open-Meteo', d: 'Caudal diario pronosticado a 30 días e historia desde 1984 a la salida de cada cuenca', url: 'https://open-meteo.com/en/docs/flood-api' },
-  { k: 'zona', n: 'SENAMHI · GeoServer IDESEP', d: 'Distritos, cuencas (ANA), ríos (IGN) y exposición ante huaicos (poblados, salud, colegios, vías)', url: 'https://idesep.senamhi.gob.pe/' },
-  { k: 'ecmwf', n: 'ECMWF · Datos abiertos', d: 'Mapa de lluvia pronosticada (IFS 0,25°, licencia CC BY 4.0)', url: 'https://www.ecmwf.int/en/forecasts/datasets/open-data' },
-  { k: 'clima', n: 'ECMWF IFS 9 km vía Open-Meteo', d: 'Tiempo actual y pronóstico de 7 días en ciudades del Perú y Ecuador', url: 'https://open-meteo.com/en/docs/ecmwf-api' },
-  { k: 'conjunto', n: 'Conjunto ECMWF vía Open-Meteo', d: '51 escenarios para la probabilidad de lluvia', url: 'https://open-meteo.com/en/docs/ensemble-api' },
-  { k: 'imerg', n: 'NASA GPM IMERG · GIBS', d: 'Lluvia estimada por satélite cada media hora', url: 'https://gpm.nasa.gov/data/imerg' },
-  { k: 'termica', n: 'NOAA GOES-East vía NASA GIBS', d: 'Imagen infrarroja (banda 13) cada 10 minutos', url: 'https://www.star.nesdis.noaa.gov/GOES/' },
-  { k: 'rayos', n: 'NOAA GOES-19 · sensor de rayos GLM', d: 'Destellos de rayos sobre el Perú en los 60 minutos previos a cada actualización', url: 'https://www.goes-r.gov/spacesegment/glm.html' },
-  { k: 'aerodromos', n: 'NOAA · Aviation Weather Center', d: 'METAR y TAF de los aeródromos de la zona', url: 'https://aviationweather.gov/' },
-  { k: 'multimodelo', n: 'Siete modelos globales vía Open-Meteo', d: 'Lluvia cada 3 h a 72 h de ECMWF, GFS, ICON, UKMO, GEM, JMA y ARPEGE: escenarios probable y pesimista', url: 'https://open-meteo.com/en/docs' },
-  { k: 'ensamble', n: 'GloFAS v4 · 51 escenarios', d: 'Probabilidad de pasar la crecida de 2, 5 y 20 años en los próximos 10 días, río por río', url: 'https://global-flood.emergency.copernicus.eu/' },
-  { k: 'oceano', n: 'NOAA · Centro de Predicción Climática', d: 'Vientos alisios a 850 hPa, calor en los primeros 300 m del Pacífico ecuatorial e índice de Oscilación del Sur (mensuales)', url: 'https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/' },
-  { k: 'mundo', n: 'GDACS (ONU y Comisión Europea)', d: 'Inundaciones, ciclones y sequías activos en el mundo, de nivel naranja o rojo', url: 'https://www.gdacs.org/' },
-  { k: 'rios_ec', n: 'GloFAS v4 · ríos de Ecuador', d: 'Caudal pronosticado de 8 ríos de la costa ecuatoriana', url: 'https://global-flood.emergency.copernicus.eu/' },
-  { k: 'imagen_zona', n: 'EOX · Sentinel-2 cloudless 2024', d: 'Imagen satelital sin nubes para el acercamiento (CC BY-NC-SA 4.0, datos Copernicus Sentinel)', url: 'https://s2maps.eu/' },
+  { k: 'enfen', tipo: 'alerta oficial', n: 'ENFEN · Comisión Multisectorial', d: 'Comunicados oficiales sobre El Niño Costero', url: 'https://enfen.imarpe.gob.pe/' },
+  { k: 'nino', tipo: 'observado', n: 'NOAA · Centro de Predicción Climática', d: 'Temperatura semanal del mar en las regiones Niño y el índice ONI', url: 'https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/sstanim.shtml' },
+  { k: 'avisos', tipo: 'alerta oficial', n: 'SENAMHI · Avisos meteorológicos', d: 'Avisos oficiales de lluvia del Perú, con sus zonas por día', url: 'https://www.senamhi.gob.pe/?p=aviso-meteorologico' },
+  { k: 'quebradas', tipo: 'alerta oficial', n: 'SENAMHI · Activación de quebradas', d: 'Aviso de corto plazo por huaicos, distrito por distrito', url: 'https://www.senamhi.gob.pe/main.php?dp=lima&p=aviso-activacion-quebrada' },
+  { k: 'emergencias', tipo: 'reporte oficial', n: 'INDECI · COEN', d: 'Reportes de emergencias por lluvias, inundaciones y huaicos en la zona norte (30 días)', url: 'https://portal.indeci.gob.pe/emergencias/' },
+  { k: 'cuencas', tipo: 'pronóstico', n: 'GloFAS v4 (Copernicus) vía Open-Meteo', d: 'Caudal diario pronosticado a 30 días e historia desde 1984 a la salida de cada cuenca', url: 'https://open-meteo.com/en/docs/flood-api' },
+  { k: 'zona', tipo: 'referencia', n: 'SENAMHI · GeoServer IDESEP', d: 'Distritos, cuencas (ANA), ríos (IGN) y exposición ante huaicos (poblados, salud, colegios, vías)', url: 'https://idesep.senamhi.gob.pe/' },
+  { k: 'ecmwf', tipo: 'pronóstico', n: 'ECMWF · Datos abiertos', d: 'Mapa de lluvia pronosticada (IFS 0,25°, licencia CC BY 4.0)', url: 'https://www.ecmwf.int/en/forecasts/datasets/open-data' },
+  { k: 'clima', tipo: 'pronóstico', n: 'ECMWF IFS 9 km vía Open-Meteo', d: 'Tiempo actual y pronóstico de 7 días en ciudades del Perú y Ecuador', url: 'https://open-meteo.com/en/docs/ecmwf-api' },
+  { k: 'conjunto', tipo: 'pronóstico', n: 'Conjunto ECMWF vía Open-Meteo', d: '51 escenarios para la probabilidad de lluvia', url: 'https://open-meteo.com/en/docs/ensemble-api' },
+  { k: 'imerg', tipo: 'estimación por satélite', n: 'NASA GPM IMERG · GIBS', d: 'Lluvia estimada por satélite cada media hora', url: 'https://gpm.nasa.gov/data/imerg' },
+  { k: 'termica', tipo: 'observado por satélite', n: 'NOAA GOES-East vía NASA GIBS', d: 'Imagen infrarroja (banda 13) cada 10 minutos', url: 'https://www.star.nesdis.noaa.gov/GOES/' },
+  { k: 'rayos', tipo: 'observado por satélite', n: 'NOAA GOES-19 · sensor de rayos GLM', d: 'Destellos de rayos sobre el Perú en los 60 minutos previos a cada actualización', url: 'https://www.goes-r.gov/spacesegment/glm.html' },
+  { k: 'aerodromos', tipo: 'observado', n: 'NOAA · Aviation Weather Center', d: 'METAR y TAF de los aeródromos de la zona', url: 'https://aviationweather.gov/' },
+  { k: 'multimodelo', tipo: 'pronóstico', n: 'Siete modelos globales vía Open-Meteo', d: 'Lluvia cada 3 h a 72 h de ECMWF, GFS, ICON, UKMO, GEM, JMA y ARPEGE: escenarios probable y pesimista', url: 'https://open-meteo.com/en/docs' },
+  { k: 'ensamble', tipo: 'pronóstico por escenarios', n: 'GloFAS v4 · 51 escenarios', d: 'Probabilidad de pasar la crecida de 2, 5 y 20 años en los próximos 10 días, río por río', url: 'https://global-flood.emergency.copernicus.eu/' },
+  { k: 'oceano', tipo: 'observado', n: 'NOAA · Centro de Predicción Climática', d: 'Vientos alisios a 850 hPa, calor en los primeros 300 m del Pacífico ecuatorial e índice de Oscilación del Sur (mensuales)', url: 'https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/' },
+  { k: 'mundo', tipo: 'alerta internacional', n: 'GDACS (ONU y Comisión Europea)', d: 'Inundaciones, ciclones y sequías activos en el mundo, de nivel naranja o rojo', url: 'https://www.gdacs.org/' },
+  { k: 'rios_ec', tipo: 'pronóstico', n: 'GloFAS v4 · ríos de Ecuador', d: 'Caudal pronosticado de 8 ríos de la costa ecuatoriana', url: 'https://global-flood.emergency.copernicus.eu/' },
+  { k: 'imagen_zona', tipo: 'referencia', n: 'EOX · Sentinel-2 cloudless 2024', d: 'Imagen satelital sin nubes para el acercamiento (CC BY-NC-SA 4.0, datos Copernicus Sentinel)', url: 'https://s2maps.eu/' },
 ];
 function pintarFuentes() {
   $('#fuentes').innerHTML = FUENTES.map(f => {
-    const fr = FRESCO[f.k];
-    return `<li><a href="${f.url}" target="_blank" rel="noopener">${esc(f.n)}</a><span class="modo ${fr?.modo === 'vivo' ? 'vivo' : ''}">${fr?.modo === 'vivo' ? 'En vivo · ' : ''}${fr ? haceCuanto(fr.t) : '–'}</span><small>${esc(f.d)}</small></li>`;
+    const fr = FRESCO[f.k], at = atrasada(f.k);
+    const cuando = !fr ? 'sin fecha' : fr.modo === 'vivo' ? `En vivo · ${haceCuanto(fr.t)}` : at ? `Sin actualizar desde ${fechaHora(fr.t)}` : haceCuanto(fr.t);
+    const fallo = fr?.fallo ? `<small class="fallo">Último intento, ${fechaHora(fr.fallo)}: falló (${esc(fr.error)}). Se muestra el dato anterior.</small>` : '';
+    return `<li><a href="${f.url}" target="_blank" rel="noopener">${esc(f.n)}</a><span class="modo${fr?.modo === 'vivo' ? ' vivo' : ''}${at ? ' viejo' : ''}">${cuando}</span><small>${f.tipo ? `<span class="tipo-dato">${f.tipo[0].toUpperCase() + f.tipo.slice(1)}.</span> ` : ''}${esc(f.d)}</small>${fallo}</li>`;
   }).join('') + `<li><span>Texturas de la Tierra</span><span class="modo">NASA</span><small>Blue Marble (día) y Black Marble (luces nocturnas); fronteras de Natural Earth.</small></li>`;
   // FRESCO.imagen_zona usa la fecha de la instantánea; la imagen es de 2024
 }
@@ -2033,8 +2049,8 @@ const FILTROS_NAC = {
 };
 // «hace 3 h» con aviso si la fuente no se actualiza desde hace más de un día
 function fuenteHtml(nombre, k) {
-  const t = FRESCO[k]?.t, viejo = t && Date.now() - t > DIA;
-  return `<span class="fuente${viejo ? ' viejo' : ''}">${nombre}${t ? ` · ${viejo ? 'desactualizado, ' : ''}${haceCuanto(t)}` : ' · sin fecha'}</span>`;
+  const t = FRESCO[k]?.t, viejo = t && (Date.now() - t > DIA || atrasada(k));
+  return `<span class="fuente${viejo ? ' viejo' : ''}">${nombre}${t ? ` · ${viejo ? `sin actualizar desde ${fechaHora(t)}` : haceCuanto(t)}` : ' · sin fecha'}</span>`;
 }
 function pintarFiltroNacional(encuadrar = false) {
   const R = resumenNacional(UI.ops.dia), f = FILTROS_NAC[UI.nac.filtro];
@@ -3615,7 +3631,7 @@ $('#asesor').addEventListener('click', e => {
 
 /* ---------------- motor del mapa (MapLibre GL JS, proyección de globo) ---------------- */
 // Expone la misma API que iniciarGlobo(); el globo three.js queda de respaldo (sin WebGL2, dentro de Claude o con ?motor=globo)
-const URL_MAPLIBRE = 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.14.0/dist/maplibre-gl.mjs';
+const URL_MAPLIBRE = LIB ? LIB + 'maplibre-gl@6.14.0/maplibre-gl.mjs' : 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.14.0/dist/maplibre-gl.mjs';
 const ESRI_TESELAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
 const BASES = {
   satelite: { n: 'Satélite', tiles: [ESRI_TESELAS + 'World_Imagery/MapServer/tile/{z}/{y}/{x}'], max: 19, ref: true,

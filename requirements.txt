@@ -1,0 +1,6 @@
+# Librerías del recolector (GitHub Actions, Python 3.12). Versiones fijas: una versión nueva no entra sin revisarla.
+eccodes==2.50.0
+numpy==2.5.4
+pillow==13.0.0
+pypdf==6.21.4
+h5py==3.16.0
